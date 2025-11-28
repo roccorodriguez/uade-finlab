@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UADE Fin Lab | Professional Mode</title>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=5">
+</head>
+<body>
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <div class="ticker-item">🏆 COPA INVERSIONES UADE <span class="positive">● LIVE</span></div>
+            <div class="ticker-item">SPY <span class="positive">▲ 0.5%</span></div>
+            <div class="ticker-item">BTC <span class="positive">▲ 2.4%</span></div>
+            <div class="ticker-item">ETH <span class="positive">▲ 3.1%</span></div>
+            <div class="ticker-item">GGAL <span class="positive">▲ 3.2%</span></div>
+            <div class="ticker-item">YPF <span class="negative">▼ 0.4%</span></div>
+            <div class="ticker-item">MELI <span class="positive">▲ 1.2%</span></div>
+            <div class="ticker-item">NVDA <span class="positive">▲ 1.8%</span></div>
+            <div class="ticker-item">AAPL <span class="positive">▲ 0.8%</span></div>
+            <div class="ticker-item">MSFT <span class="positive">▲ 1.1%</span></div>
+            <div class="ticker-item">AMZN <span class="positive">▲ 1.5%</span></div>
+            <div class="ticker-item">GOOGL <span class="negative">▼ 0.2%</span></div>
+            <div class="ticker-item">TSLA <span class="negative">▼ 1.5%</span></div>
+
+            <div class="ticker-item">🏆 COPA INVERSIONES UADE <span class="positive">● LIVE</span></div>
+            <div class="ticker-item">SPY <span class="positive">▲ 0.5%</span></div>
+            <div class="ticker-item">BTC <span class="positive">▲ 2.4%</span></div>
+            <div class="ticker-item">ETH <span class="positive">▲ 3.1%</span></div>
+            <div class="ticker-item">GGAL <span class="positive">▲ 3.2%</span></div>
+            <div class="ticker-item">YPF <span class="negative">▼ 0.4%</span></div>
+            <div class="ticker-item">MELI <span class="positive">▲ 1.2%</span></div>
+            <div class="ticker-item">NVDA <span class="positive">▲ 1.8%</span></div>
+            <div class="ticker-item">AAPL <span class="positive">▲ 0.8%</span></div>
+            <div class="ticker-item">MSFT <span class="positive">▲ 1.1%</span></div>
+            <div class="ticker-item">AMZN <span class="positive">▲ 1.5%</span></div>
+            <div class="ticker-item">GOOGL <span class="negative">▼ 0.2%</span></div>
+            <div class="ticker-item">TSLA <span class="negative">▼ 1.5%</span></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="brand">
+                <h1>UADE <span>FIN LAB</span></h1>
+                <p style="font-size: 12px; color: var(--text-muted);">Terminal de Trading Institucional</p>
+            </div>
+            <div class="market-status">
+                <div class="status-pill"><div class="status-dot"></div> MERCADO ABIERTO</div>
+                <div class="status-pill" style="border-color: var(--border);">🏆 CIERRE COPA: <span id="competitionTimer" style="margin-left:5px; font-family:'JetBrains Mono'; font-weight:bold; color:var(--gold);">00d 00h 00m 00s</span></div>
+            </div>
+        </header>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('markets', this)">Global Heatmap</div>
+            <div class="nav-tab" onclick="switchTab('explorer', this)">Trading Competition</div>
+            <div class="nav-tab" onclick="switchTab('analysis', this)">AI Strategy & Chart</div>
+        </div>
+
+        <div id="markets" class="section active">
+            <div class="card" style="height: 100%; display: flex; flex-direction: column; padding: 0; border: none;">
+                <div class="tradingview-widget-container" style="width: 100%; height: 100%;">
+                    <div class="tradingview-widget-container__widget" style="width: 100%; height: 100%;"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+                    {
+                        "exchanges": [],
+                        "dataSource": "SPX500",
+                        "grouping": "sector",
+                        "blockSize": "market_cap_basic",
+                        "blockColor": "change",
+                        "locale": "es",
+                        "symbolUrl": "",
+                        "colorTheme": "dark",
+                        "hasTopBar": true, 
+                        "isDataSetEnabled": true,
+                        "isZoomEnabled": true,
+                        "hasSymbolTooltip": true,
+                        "isMonoSize": false,
+                        "width": "100%",
+                        "height": "100%"
+                    }
+                    </script>
+                </div>
+            </div>
+        </div>
+
+        <div id="explorer" class="section">
+            <div class="competition-grid">
+                
+                <div class="card">
+                    <h4 style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; margin-bottom: 10px;">Mercado Spot (Simulado)</h4>
+                    
+                    <div class="search-container">
+                        <input type="text" id="newAssetInput" placeholder="Agregar Ticker (ej: KO)" onkeypress="handleEnter(event)">
+                        <button onclick="addNewAsset()">＋</button>
+                    </div>
+                
+                    <div class="asset-list" id="assetList"></div>
+                </div>
+
+                <div class="col-center">
+                    
+                    <div class="card leaderboard-container">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                            <h3 style="display:flex; align-items:center; gap:10px;">🏆 Ranking de Alumnos</h3>
+                            <small style="color:var(--text-muted)">Ordenado por ROI %</small>
+                        </div>
+                        <div style="flex-grow:1; overflow-y:auto;">
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50">#</th>
+                                        <th>Legajo</th>
+                                        <th style="text-align:right">Capital Total</th>
+                                        <th style="text-align:right">Rendimiento</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaderboardBody">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card live-feed-container">
+                        <h4 style="color: var(--text-muted); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; margin-bottom: 10px;">📡 Bitácora de Mercado en Vivo</h4>
+                        <div class="feed-list">
+                            <div class="feed-wrapper" id="marketFeed">
+                                <div class="feed-item"><span style="color:#aaa">Sistema iniciado... esperando órdenes.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    
+                    <div id="loginPanel" class="login-panel" style="padding: 30px;">
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 40px; margin-bottom: 10px;">🔐</div>
+                            <h3>Acceso Alumno</h3>
+                            <p style="font-size: 12px; color: var(--text-muted);">Ingresa tu legajo para operar</p>
+                        </div>
+                        <input type="number" id="legajoInput" class="login-input" placeholder="Ej: 1122334">
+                        <button class="login-btn" onclick="studentLogin()">Ingresar a Terminal</button>
+                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 15px;">*Si es tu primera vez, se te asignarán $100,000 USD virtuales.</p>
+                    </div>
+
+                    <div id="tradingPanel" class="trade-interface" style="padding: 20px;">
+                        <div class="student-badge">
+                            <div class="student-info">
+                                <h4>Legajo: <span id="userLegajo">---</span></h4>
+                                <h2 id="userBalance">$100,000</h2>
+                                <span style="font-size: 10px; color: var(--success);">PODER DE COMPRA DISPONIBLE</span>
+                            </div>
+                            <button class="logout-btn" onclick="studentLogout()">⏻ Cerrar Sesión</button>
+                        </div>
+
+                        <div class="order-form">
+                            <h4 style="margin-bottom: 15px; color: #fff;">Operar <span id="orderAsset" style="color: #fff; font-weight:bold;">GGAL</span></h4>
+                            <div class="input-group">
+                                <label>Precio de Mercado</label>
+                                <div id="orderPrice" style="font-family: 'JetBrains Mono'; font-size: 14px;">$0.00</div>
+                            </div>
+                            <div class="input-group">
+                                <label>Cantidad (Acciones)</label>
+                                <input type="number" id="orderQty" class="qty-input" value="10" min="1">
+                            </div>
+                            <div class="action-btns">
+                                <button class="btn-trade btn-buy" onclick="executeOrder('buy')">Comprar</button>
+                                <button class="btn-trade btn-sell" onclick="executeOrder('sell')">Vender</button>
+                            </div>
+                        </div>
+
+                        <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;">Mi Portafolio</h4>
+                        <div class="holdings-list" id="holdingsList">
+                            </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="analysis" class="section">
+            <div class="analysis-grid">
+                
+                <div style="display: flex; flex-direction: column; height: 100%;">
+                    
+                    <div class="chart-wrapper">
+                         <div id="tv_chart_container" style="height: 100%; width: 100%;"></div>
+                    </div>
+
+                    <div class="card analysis-details">
+                        <h4 style="color:#fff; margin-bottom:10px;">Resumen Fundamental</h4>
+                        <div class="analysis-row">
+                            <span class="analysis-label">Nombre</span>
+                            <span class="analysis-val" id="metaName">Grupo Galicia</span>
+                        </div>
+                        <div class="analysis-row">
+                            <span class="analysis-label">Sector</span>
+                            <span class="analysis-val" id="metaSector">Financiero</span>
+                        </div>
+                        <div class="analysis-row">
+                            <span class="analysis-label">Volatilidad</span>
+                            <span class="analysis-val" id="metaVol">Alta</span>
+                        </div>
+                        <div class="analysis-row">
+                            <span class="analysis-label">Target IA (12M)</span>
+                            <span class="analysis-val positive" id="metaTarget">Wait...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border);">
+                    <div class="embedded-chat-container">
+                        <div class="chat-header">
+                            <div>
+                                <h2>UADE Fin Bot AI</h2>
+                                <p style="font-size: 11px; opacity: 0.8; color: #ccc;">Analista dedicado para <span id="chat-context-asset" style="font-weight:bold;">GGAL</span></p>
+                            </div>
+                            <div style="font-size: 20px;">💬</div>
+                        </div>
+                        
+                        <ul class="chatbox">
+                            <li class="chat incoming">
+                                <span>🤖</span>
+                                <p>Hola. Estoy analizando el gráfico de este activo. ¿Quieres una proyección técnica o un análisis de noticias?</p>
+                            </li>
+                        </ul>
+                        
+                        <div class="chat-input">
+                            <textarea placeholder="Pregunta sobre la tendencia..." required></textarea>
+                            <span id="send-btn">➤</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast">Notificación</div>
+
+    <script src="/static/script.js?v=5"></script>
+</body>
+</html>

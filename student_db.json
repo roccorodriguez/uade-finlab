@@ -1,0 +1,21 @@
+{
+    "999001": {
+        "balance": 5000.0,
+        "portfolio": {
+            "BTC": 1.05
+        },
+        "initial": 100000.0
+    },
+    "999002": {
+        "balance": 102000.0,
+        "portfolio": {},
+        "initial": 100000.0
+    },
+    "1208371": {
+        "balance": 99238.4,
+        "portfolio": {
+            "GGAL": 14
+        },
+        "initial": 100000.0
+    }
+}
