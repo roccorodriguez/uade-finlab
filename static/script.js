@@ -1,16 +1,6 @@
 const API_KEY = "AIzaSyBpOSQq5DnU_0wfxPWb8uPZt0U8LHJhjeM"; 
 const INITIAL_CAPITAL = 100000;
-const STUDENT_DB_URL = '/api/db/'; 
-
-const AVAILABLE_ASSETS = {
-    GGAL: { name: 'Grupo Galicia', sector: 'Financiero', tvSymbol: 'NASDAQ:GGAL' },
-    YPFD: { name: 'YPF S.A.', sector: 'Energía', tvSymbol: 'NYSE:YPF' },
-    MELI: { name: 'Mercado Libre', sector: 'E-Commerce', tvSymbol: 'NASDAQ:MELI' },
-    MSFT: { name: 'Microsoft', sector: 'Tecnología', tvSymbol: 'NASDAQ:MSFT' },
-    AAPL: { name: 'Apple Inc.', sector: 'Tecnología', tvSymbol: 'NASDAQ:AAPL' },
-    TSLA: { name: 'Tesla', sector: 'Automotriz', tvSymbol: 'NASDAQ:TSLA' },
-    BTC:  { name: 'Bitcoin', sector: 'Cripto', tvSymbol: 'BINANCE:BTCUSDT' }
-};
+const STUDENT_DB_URL = '/api/db/';
 
 let realTimePrices = {}; 
 let currentAsset = 'GGAL';
@@ -234,18 +224,19 @@ function renderLeaderboard(students) {
 function renderAssetList() {
     const container = document.getElementById('assetList');
     container.innerHTML = '';
-    
-    if (Object.keys(realTimePrices).length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#555; font-size:12px;">Cargando mercado...</div>';
+
+    const symbols = Object.keys(realTimePrices);
+
+    if (symbols.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#555; font-size:12px;">Mercado vacío o cargando...<br>Agrega un activo con el botón +</div>';
         return;
     }
 
-    const symbols = Object.keys(AVAILABLE_ASSETS).reverse(); 
-
     symbols.forEach(symbol => {
-        const d = AVAILABLE_ASSETS[symbol];
-        const p = realTimePrices[symbol] || {price: 0.00, change_percent: 0.00};
-        
+        const p = realTimePrices[symbol];
+
+        if (!p) return;
+
         const activeClass = symbol === currentAsset ? 'active' : '';
         const priceClass = p.change_percent >= 0 ? 'positive' : 'negative';
 
@@ -261,7 +252,7 @@ function renderAssetList() {
                 
                 <div style="overflow: hidden;">
                     <div class="asset-symbol" style="color: #fff;">${symbol}</div>
-                    <div class="asset-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.name}</div>
+                    <div class="asset-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || symbol}</div>
                 </div>
 
                 <button class="btn-remove" onclick="event.stopPropagation(); removeAsset('${symbol}')" title="Eliminar">
@@ -277,12 +268,18 @@ function renderAssetList() {
     });
 }
 
-function loadTradingViewChart(symbolKey) {
-    const symbol = AVAILABLE_ASSETS[symbolKey].tvSymbol || 'NASDAQ:AAPL';
-    
-    if (document.getElementById('tv_chart_container')) {
-        document.getElementById('tv_chart_container').innerHTML = ''; 
+function loadTradingViewChart(symbol) {
+    let tvSymbol = `NASDAQ:${symbol}`;
+
+    if (["BTC", "ETH", "USDT", "BNB", "SOL"].includes(symbol)) {
+        tvSymbol = `BINANCE:${symbol}USDT`;
+    } else if (["YPF", "GGAL", "BMA", "TECO2"].includes(symbol) && symbol.length === 4) {
+        tvSymbol = `NASDAQ:${symbol}`;
+    }
         
+    if (document.getElementById("tv_chart_container")) {
+        document.getElementById("tv_chart_container").innerHTML = '';
+
         new TradingView.widget({
             "autosize": true,
             "symbol": symbol,
@@ -304,14 +301,16 @@ function loadTradingViewChart(symbolKey) {
 }
 
 function loadAsset(symbol) {
-    currentAsset = symbol;
+    if (!realTimePrices[symbol] && Object.keys(realTimePrices).length > 0) {
+        symbol = Object.keys(realTimePrices)[0];
+    }
     
-    const data = AVAILABLE_ASSETS[symbol];
-    const prices = realTimePrices[symbol] || { sector: data.sector, volatility: 0 };
+    currentAsset = symbol;
+    const data = realTimePrices[symbol] || { name: symbol, sector: 'General', volatility: 0 };
 
     if(document.getElementById('metaName')) document.getElementById('metaName').innerText = data.name;
-    if(document.getElementById('metaSector')) document.getElementById('metaSector').innerText = prices.sector || data.sector;
-    if(document.getElementById('metaVol')) document.getElementById('metaVol').innerText = (prices.volatility * 100).toFixed(1) + '%';
+    if(document.getElementById('metaSector')) document.getElementById('metaSector').innerText = data.sector;
+    if(document.getElementById('metaVol')) document.getElementById('metaVol').innerText = (data.volatility * 100).toFixed(1) + '%';
     if(document.getElementById('chat-context-asset')) document.getElementById('chat-context-asset').innerText = symbol;
     
     const targets = ['Strong Buy', 'Hold', 'Sell', 'Accumulate'];
@@ -414,26 +413,30 @@ async function addNewAsset() {
     const symbol = input.value.trim().toUpperCase();
 
     if (!symbol) return showToast('⚠️ Escribe un símbolo', 'error');
-    if (AVAILABLE_ASSETS[symbol]) return showToast('⚠️ El activo ya está en la lista', 'error');
 
     const btn = document.querySelector('.search-container button');
     const originalText = btn.innerText;
     btn.innerText = "⌛";
 
     try {
-        AVAILABLE_ASSETS[symbol] = {
-            name: `${symbol} (No Verif.)`,
-            sector: 'General',
-            tvSymbol: `NASDAQ:${symbol}`
-        };
+        const response = await fetch("/api/market/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbol: symbol })
+        });
 
-        renderAssetList();
-        
-        showToast(`✅ ${symbol} agregado al mercado (sin precio real aún).`, 'success');
-        input.value = '';
-        
-        loadAsset(symbol);
+        const result = await response.json();
 
+        if (response.ok) {
+            showToast(`✅ ${symbol} agregado correctamente.`, 'success');
+            input.value = '';
+
+            await fetchMarketDataAndLeaderboard();
+
+            loadAsset(symbol);
+        } else {
+            showToast(`❌ ${result.detail || 'Error al agregar'}`, 'error');
+        }
     } catch (error) {
         showToast('❌ Error al agregar activo', 'error');
     } finally {
@@ -441,19 +444,33 @@ async function addNewAsset() {
     }
 }
 
-function removeAsset(symbol) {
-    const holdings = currentUser ? (db[currentUser.legajo].portfolio[symbol] || 0) : 0;
+async function removeAsset(symbol) {
+    const holdings = currentUser ? (db[currentUser.legajo]?.portfolio?.[symbol] || 0) : 0;
     
     if (holdings > 0) {
-        return showToast(`❌ Error: Debes vender las ${holdings} acciones de ${symbol} primero.`, 'error');
+        return showToast(`❌ Error: Tienes ${holdings} acciones de ${symbol}. Véndelas antes de borrar el activo de la lista.`, 'error');
     }
     
-    if (symbol === currentAsset) {
-         loadAsset('GGAL'); 
+    if (confirm(`¿Seguro que quieres eliminar ${symbol} de la pizarra?`)) {
+        try {
+            const response = await fetch(`/api/market/${symbol}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast(`🗑️ ${symbol} eliminado.`, 'success');
+
+                if (symbol === currentAsset) {
+                    const remaining = Object.keys(realTimePrices).filter(k => k !== symbol);
+                    if (remaining.length > 0) loadAsset(remaining[0]);
+                }
+
+                fetchMarketDataAndLeaderboard();
+            } else {
+                showToast('❌ Error al eliminar activo.', 'error');
+            }
+        } catch (e) {
+            showToast('❌ Error de conexión.', 'error');
+        }
     }
-    
-    delete AVAILABLE_ASSETS[symbol];
-    
-    showToast(`🗑️ ${symbol} eliminado de la pila de mercado.`, 'success');
-    renderAssetList(); 
 }

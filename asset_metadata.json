@@ -1,0 +1,72 @@
+{
+    "TSLA": {
+        "name": "Tesla, Inc.",
+        "sector": "Consumer Cyclical",
+        "volatility": 1.872
+    },
+    "NVDA": {
+        "name": "NVIDIA Corporation",
+        "sector": "Technology",
+        "volatility": 2.269
+    },
+    "MELI": {
+        "name": "MercadoLibre, Inc.",
+        "sector": "Consumer Cyclical",
+        "volatility": 1.415
+    },
+    "YPF": {
+        "name": "YPF Sociedad Anonima",
+        "sector": "Energy",
+        "volatility": 0.279
+    },
+    "BTC": {
+        "name": "Bitcoin USD",
+        "sector": "General",
+        "volatility": 1.0
+    },
+    "META": {
+        "name": "Meta Platforms, Inc.",
+        "sector": "Communication Services",
+        "volatility": 1.272
+    },
+    "MSFT": {
+        "name": "Microsoft Corporation",
+        "sector": "Technology",
+        "volatility": 1.065
+    },
+    "AMZN": {
+        "name": "Amazon.com, Inc.",
+        "sector": "Consumer Cyclical",
+        "volatility": 1.368
+    },
+    "GOOGL": {
+        "name": "Alphabet Inc.",
+        "sector": "Communication Services",
+        "volatility": 1.082
+    },
+    "KO": {
+        "name": "Coca-Cola Company (The)",
+        "sector": "Consumer Defensive",
+        "volatility": 0.398
+    },
+    "BRK": {
+        "name": "BRK",
+        "sector": "General",
+        "volatility": 1.0
+    },
+    "NFLX": {
+        "name": "Netflix, Inc.",
+        "sector": "Communication Services",
+        "volatility": 1.703
+    },
+    "JPM": {
+        "name": "JP Morgan Chase & Co.",
+        "sector": "Financial Services",
+        "volatility": 1.076
+    },
+    "BRK-A": {
+        "name": "Berkshire Hathaway Inc.",
+        "sector": "Financial Services",
+        "volatility": 0.709
+    }
+}
