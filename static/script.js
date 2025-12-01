@@ -1,9 +1,7 @@
-// ================= CONFIGURACIÓN =================
 const API_KEY = "AIzaSyBpOSQq5DnU_0wfxPWb8uPZt0U8LHJhjeM"; 
 const INITIAL_CAPITAL = 100000;
 const STUDENT_DB_URL = '/api/db/'; 
 
-// Catálogo Central: Ahora es solo metadata (nombre, sector)
 const AVAILABLE_ASSETS = {
     GGAL: { name: 'Grupo Galicia', sector: 'Financiero', tvSymbol: 'NASDAQ:GGAL' },
     YPFD: { name: 'YPF S.A.', sector: 'Energía', tvSymbol: 'NYSE:YPF' },
@@ -14,34 +12,25 @@ const AVAILABLE_ASSETS = {
     BTC:  { name: 'Bitcoin', sector: 'Cripto', tvSymbol: 'BINANCE:BTCUSDT' }
 };
 
-// Nueva variable global para almacenar los precios en tiempo real del backend
 let realTimePrices = {}; 
-
 let currentAsset = 'GGAL';
 let currentUser = null;
-let db = {}; // Almacena temporalmente los datos del alumno logueado
+let db = {};
 let chatHistory = {};
 
-// Fecha de cierre de la competencia (27 Enero 2026)
 const countDownDate = new Date("Jan 27, 2026 00:00:00").getTime();
 
-// ================= INICIALIZACIÓN Y BUCLE PRINCIPAL =================
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializa el sistema y carga todo del backend
     initializeApp(); 
     
-    // Loop principal: Actualiza precios y ranking cada 10 segundos
     setInterval(fetchMarketDataAndLeaderboard, 10000); 
-    // Mantenemos el timer en 1s
     setInterval(updateTimer, 1000); 
 });
 
 async function initializeApp() {
     try {
-        // Cargar todos los precios y el ranking
         await fetchMarketDataAndLeaderboard();
         
-        // Esto solo carga el portafolio del usuario actual
         loadUserDataFromBackend(); 
         
         renderAssetList();
@@ -53,11 +42,8 @@ async function initializeApp() {
     }
 }
 
-// ================= FUNCIÓN DE ACTUALIZACIÓN (Reemplaza updateMarketPrices y renderLeaderboard) =================
-
 async function fetchMarketDataAndLeaderboard() {
     try {
-        // Pedimos al backend los datos de mercado y el ranking ya calculado.
         const [marketResponse, leaderboardResponse] = await Promise.all([
             fetch('/api/market-data'),
             fetch('/api/leaderboard')
@@ -66,25 +52,20 @@ async function fetchMarketDataAndLeaderboard() {
         const marketData = await marketResponse.json();
         const leaderboardData = await leaderboardResponse.json();
 
-        // 1. Guardamos el nuevo catálogo global de precios (el caché JS)
         realTimePrices = marketData; 
         
-        // 2. Dibujamos la lista de activos con los precios reales
         renderAssetList(); 
         
-        // 3. Dibujamos el ranking
         renderLeaderboard(leaderboardData); 
         
-        // 4. Actualizamos la interfaz del usuario si está logueado
         if (currentUser) updateUIForUser(true); 
 
     } catch (error) {
-        showToast('⚠️ No se pudieron cargar los precios en tiempo real. Revisar Uvicorn.', 'error');
+        showToast('⚠️ No se pudieron cargar los precios en tiempo real.', 'error');
         console.error("Error fetching market data:", error);
     }
 }
 
-// ================= TIMER =================
 function updateTimer() {
     const now = new Date().getTime();
     const distance = countDownDate - now;
@@ -105,7 +86,6 @@ function updateTimer() {
     }
 }
 
-// ================= NAV & WIDGET LOGIC =================
 function switchTab(id, tab) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -113,16 +93,12 @@ function switchTab(id, tab) {
     tab.classList.add('active');
 }
 
-// ================= DATABASE / AUTH =================
-// Eliminamos loadDB() y saveDB()
-
 async function loadUserDataFromBackend() {
     if (!currentUser) return;
     try {
         const response = await fetch(`${STUDENT_DB_URL}${currentUser.legajo}`);
         if (response.ok) {
             const userData = await response.json();
-            // Actualizamos la DB local y el usuario actual con los datos del backend
             db[currentUser.legajo] = userData;
             currentUser = { legajo: currentUser.legajo, ...userData };
             updateUIForUser();
@@ -136,7 +112,6 @@ function studentLogin() {
     const legajo = document.getElementById('legajoInput').value.trim();
     if (!legajo) return showToast('⚠️ Ingresa un número de legajo', 'error');
 
-    // Aquí ya no creamos el usuario; el backend lo crea si no existe (ver /api/db/{legajo} en main.py)
     currentUser = { legajo }; 
     loadUserDataFromBackend();
 
@@ -151,7 +126,6 @@ function studentLogout() {
     document.getElementById('loginPanel').style.display = 'flex';
 }
 
-// ================= TRADING LOGIC =================
 function updateUIForUser(pricesUpdated = false) {
     if (!currentUser) return;
 
@@ -160,11 +134,9 @@ function updateUIForUser(pricesUpdated = false) {
     document.getElementById('userBalance').innerText = formatMoney(userData.balance);
     document.getElementById('orderAsset').innerText = currentAsset;
     
-    // Obtenemos el precio del caché de precios en tiempo real
     const currentPrice = realTimePrices[currentAsset] ? realTimePrices[currentAsset].price : 0.00;
     document.getElementById('orderPrice').innerText = formatMoney(currentPrice);
 
-    // Renderizar portafolio (Usa realTimePrices para calcular valor)
     const list = document.getElementById('holdingsList');
     list.innerHTML = '';
     const entries = Object.entries(userData.portfolio);
@@ -172,7 +144,6 @@ function updateUIForUser(pricesUpdated = false) {
     else {
         entries.forEach(([symbol, qty]) => {
             if (qty > 0) {
-                // Buscamos el precio en el caché de tiempo real
                 const assetPrice = realTimePrices[symbol] ? realTimePrices[symbol].price : 0;
                 const totalVal = qty * assetPrice;
                 list.innerHTML += `<div class="holding-item"><div><strong style="color:#fff">${symbol}</strong> <span style="color:#aaa">(${qty})</span></div><div>${formatMoney(totalVal)}</div></div>`;
@@ -191,7 +162,7 @@ async function executeOrder(type) {
         legajo: currentUser.legajo,
         asset: currentAsset,
         quantity: qty,
-        type: type // 'buy' o 'sell'
+        type: type
     };
 
     try {
@@ -209,7 +180,6 @@ async function executeOrder(type) {
             showToast(`✅ ${type === 'buy' ? 'Compra' : 'Venta'} Exitosa`, 'success');
             addToFeed(currentUser.legajo, currentAsset, type.toUpperCase(), qty);
             
-            // Recargamos datos y ranking inmediatamente después del trade
             await fetchMarketDataAndLeaderboard(); 
 
         } else {
@@ -221,7 +191,6 @@ async function executeOrder(type) {
     }
 }
 
-// ================= COMPETITION FEATURES =================
 function addToFeed(legajo, symbol, type, qty) {
     const feed = document.getElementById('marketFeed');
     const item = document.createElement('div');
@@ -237,7 +206,6 @@ function addToFeed(legajo, symbol, type, qty) {
     if(feed.children.length > 8) feed.lastChild.remove();
 }
 
-// Reemplaza la función renderLeaderboard
 function renderLeaderboard(students) {
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
@@ -262,10 +230,6 @@ function renderLeaderboard(students) {
         `;
     });
 }
-
-// ================= GENERAL UI =================
-
-// script.js - Reemplaza renderAssetList
 
 function renderAssetList() {
     const container = document.getElementById('assetList');
@@ -292,7 +256,6 @@ function renderAssetList() {
             </svg>
         `;
 
-        // ORDEN NUEVO: Info | Botón | Precio
         container.innerHTML += `
             <div class="asset-item ${activeClass}" onclick="loadAsset('${symbol}')">
                 
@@ -314,7 +277,6 @@ function renderAssetList() {
     });
 }
 
-// ================= NUEVO: TRADINGVIEW LOGIC =================
 function loadTradingViewChart(symbolKey) {
     const symbol = AVAILABLE_ASSETS[symbolKey].tvSymbol || 'NASDAQ:AAPL';
     
@@ -329,7 +291,7 @@ function loadTradingViewChart(symbolKey) {
             "theme": "dark",
             "style": "1",
             "locale": "es",
-            "toolbar_bg": "#161616", // Ajustado para que TradingView respete el color
+            "toolbar_bg": "#161616",
             "enable_publishing": false,
             "hide_top_toolbar": false,
             "hide_legend": false,
@@ -349,7 +311,6 @@ function loadAsset(symbol) {
 
     if(document.getElementById('metaName')) document.getElementById('metaName').innerText = data.name;
     if(document.getElementById('metaSector')) document.getElementById('metaSector').innerText = prices.sector || data.sector;
-    // Usamos el beta de YFinance como proxy de volatilidad
     if(document.getElementById('metaVol')) document.getElementById('metaVol').innerText = (prices.volatility * 100).toFixed(1) + '%';
     if(document.getElementById('chat-context-asset')) document.getElementById('chat-context-asset').innerText = symbol;
     
@@ -375,7 +336,6 @@ function showToast(msg, type) {
     setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
 }
 
-// ================= CHATBOT =================
 const chatbox = document.querySelector(".chatbox");
 const chatInput = document.querySelector(".chat-input textarea");
 const sendChatBtn = document.querySelector(".chat-input span");
@@ -389,7 +349,6 @@ const createChatLi = (message, className) => {
     return chatLi;
 }
 
-// Función para renderizar el chat guardado o iniciar uno nuevo
 function renderChat(symbol) {
     chatbox.innerHTML = ''; 
     
@@ -446,8 +405,6 @@ const handleChat = () => {
 }
 sendChatBtn.addEventListener("click", handleChat);
 
-// ================= AGREGAR/ELIMINAR ASSETS =================
-
 function handleEnter(e) {
     if (e.key === 'Enter') addNewAsset();
 }
@@ -459,16 +416,11 @@ async function addNewAsset() {
     if (!symbol) return showToast('⚠️ Escribe un símbolo', 'error');
     if (AVAILABLE_ASSETS[symbol]) return showToast('⚠️ El activo ya está en la lista', 'error');
 
-    // NOTA: Para que este activo se agregue con precio REAL, debe ser agregado 
-    // a la lista 'TICKER_MAP' en main.py y el servidor debe reiniciarse.
-    // Por ahora, solo lo agregamos al frontend para la UI.
-    
     const btn = document.querySelector('.search-container button');
     const originalText = btn.innerText;
     btn.innerText = "⌛";
 
     try {
-        // SIMULACIÓN DE DATA MÍNIMA (para que no falle la UI)
         AVAILABLE_ASSETS[symbol] = {
             name: `${symbol} (No Verif.)`,
             sector: 'General',
@@ -500,8 +452,6 @@ function removeAsset(symbol) {
          loadAsset('GGAL'); 
     }
     
-    // NOTA: Para que el activo se deje de monitorear en el backend,
-    // también debe ser removido de la lista 'ACTIVE_SYMBOLS' en main.py.
     delete AVAILABLE_ASSETS[symbol];
     
     showToast(`🗑️ ${symbol} eliminado de la pila de mercado.`, 'success');

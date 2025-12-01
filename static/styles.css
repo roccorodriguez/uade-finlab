@@ -1,5 +1,4 @@
 :root {
-    /* PALETA DE COLORES */
     --bg-dark: #000000;
     --bg-panel: #161616; 
     
@@ -25,12 +24,10 @@ body {
     overflow: hidden;
 }
 
-/* SCROLLBAR */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-dark); }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
-/* === TICKER === */
 .ticker-wrap {
     position: fixed; top: 0; width: 100%; height: 40px; background: var(--bg-panel);
     border-bottom: 1px solid var(--border); overflow: hidden; z-index: 1000; display: flex; align-items: center;
@@ -62,7 +59,6 @@ body {
 .positive { color: var(--success); }
 .negative { color: var(--danger); }
 
-/* LAYOUT */
 .container {
     max-width: 1600px; margin: 60px auto 0; padding: 0 20px;
     display: flex; flex-direction: column;
@@ -85,7 +81,6 @@ header {
 }
 .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
 
-/* TABS */
 .nav-tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-shrink: 0; }
 .nav-tab {
     padding: 10px 24px; background: transparent; border: 1px solid transparent;
@@ -102,21 +97,18 @@ header {
 .section { display: none; padding-bottom: 20px; animation: fadeUp 0.4s ease; }
 .section.active { display: block; }
 
-/* AJUSTE DE ALTURA */
 #markets, .competition-grid, .analysis-grid {
     height: calc(100vh - 270px); 
 }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* TARJETAS GENERALES */
 .card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px;
     padding: 20px; box-shadow: none; 
     display: flex; flex-direction: column;
 }
 
-/* FIX PARA EL WIDGET DE TRADINGVIEW (MAPA DE CALOR) */
 #markets .card {
     height: 100%;
     padding: 0;
@@ -134,18 +126,15 @@ header {
     background-color: #000000;
 }
 
-/* GRID SYSTEM */
 .competition-grid {
     display: grid; grid-template-columns: 280px 1fr 340px; gap: 20px;
 }
-/* Asegurar que la columna de activos use todo el alto */
 #explorer .competition-grid .card:first-child { height: 100%; }
 
 .analysis-grid {
     display: grid; grid-template-columns: 1fr 400px; gap: 20px;
 }
 
-/* === BUSCADOR DE ACTIVOS === */
 .search-container {
     display: flex;
     gap: 8px;
@@ -189,7 +178,6 @@ header {
     color: #000;
 }
 
-/* === LISTA DE ACTIVOS (CLEAN UI - AJUSTADO) === */
 .asset-list { 
     flex-basis: 0; 
     flex-grow: 1;
@@ -199,7 +187,6 @@ header {
 
 .asset-item {
     display: grid; 
-    /* Columna 1: Info (Ocupa todo el espacio) | Columna 2: Botón | Columna 3: Precio */
     grid-template-columns: 1fr auto auto; 
     gap: 8px;
     align-items: center;
@@ -223,7 +210,6 @@ header {
 .asset-symbol { font-weight: 700; font-size: 13px; color: #fff; }
 .asset-name { font-size: 10px; color: var(--text-muted); }
 
-/* PRECIO (Estilo ROI) */
 .asset-price-mini { 
     font-family: 'JetBrains Mono', monospace; 
     font-weight: 700; 
@@ -237,7 +223,6 @@ header {
 .asset-price-mini.positive { color: var(--success); }
 .asset-price-mini.negative { color: var(--danger); }
 
-/* BOTÓN ELIMINAR (Lógica Estricta) */
 .btn-remove {
     width: 20px; height: 20px;
     background: transparent; border: none;
@@ -245,18 +230,15 @@ header {
     display: flex; align-items: center; justify-content: center;
     padding: 0;
     
-    /* Estado inicial: Invisible y NO cliqueable */
     opacity: 0;
     pointer-events: none; 
     transition: opacity 0.2s ease;
     color: #555; 
 }
 
-/* REGLA DE VISIBILIDAD: SOLO si está Activo (.active) */
-/* Ya no usamos :hover aquí */
 .asset-item.active .btn-remove {
     opacity: 1;
-    pointer-events: auto; /* Habilitamos el click */
+    pointer-events: auto;
 }
 
 .btn-remove:hover {
@@ -268,7 +250,6 @@ header {
     stroke-width: 2;
 }
 
-/* CENTER COLUMN */
 .col-center { display: flex; flex-direction: column; gap: 20px; height: 100%; }
 
 .leaderboard-container { 
@@ -295,7 +276,6 @@ header {
 .feed-sell { border-left-color: var(--danger); }
 @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-/* TABLE */
 .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .leaderboard-table th { 
     text-align: left; color: var(--text-muted); padding: 8px 12px; 
@@ -314,7 +294,6 @@ header {
 .roi-positive { color: var(--success); font-weight: bold; font-family: 'JetBrains Mono'; }
 .roi-negative { color: var(--danger); font-weight: bold; font-family: 'JetBrains Mono'; }
 
-/* LOGIN & TRADE */
 .login-panel { text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 15px; }
 .login-input { 
     background: #000; border: 1px solid var(--border); padding: 15px; 
@@ -339,7 +318,6 @@ header {
 .student-info h4 { font-size: 12px; color: var(--text-muted); }
 .student-info h2 { font-family: 'JetBrains Mono'; font-size: 18px; color: #fff; }
 
-/* BOTÓN CERRAR SESIÓN MEJORADO */
 .logout-btn { 
     background: rgba(242, 54, 69, 0.1); 
     border: 1px solid var(--danger); 
@@ -375,7 +353,6 @@ header {
     border-bottom: 1px solid var(--border); font-size: 12px; 
 }
 
-/* AI STRATEGY */
 .chart-wrapper {
     background: var(--bg-panel); border: 1px solid var(--border);
     border-radius: 4px; padding: 0; height: 60%; position: relative; margin-bottom: 20px; overflow: hidden;
@@ -387,7 +364,6 @@ header {
 .analysis-label { color: var(--text-muted); font-size: 12px; }
 .analysis-val { font-family: 'JetBrains Mono'; font-weight: bold; }
 
-/* EMBEDDED CHAT */
 .embedded-chat-container { display: flex; flex-direction: column; height: 100%; background: var(--bg-panel); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
 .chat-header { background: #0a0a0a; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
 .chatbox { flex-grow: 1; overflow-y: auto; padding: 20px; background: #000; display: flex; flex-direction: column; gap: 15px; list-style: none; }
@@ -402,7 +378,6 @@ header {
 .chat-input textarea { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 4px; resize: none; height: 40px; }
 .chat-input span { align-self: center; color: #fff; cursor: pointer; font-size: 20px; }
 
-/* MISC */
 .custom-select {
     background: #000; color: #fff; border: 1px solid var(--border); padding: 8px;
     border-radius: 4px; width: 250px; cursor: pointer; outline: none;
