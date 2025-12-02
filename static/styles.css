@@ -28,32 +28,48 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-dark); }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
-.ticker-wrap {
-    position: fixed; top: 0; width: 100%; height: 40px; background: var(--bg-panel);
-    border-bottom: 1px solid var(--border); overflow: hidden; z-index: 1000; display: flex; align-items: center;
+/* ================= TICKER TRADINGVIEW (Versión Definitiva) ================= */
+
+.tv-ticker-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* Altura ajustada: 42px es el punto dulce para escala 0.90 */
+    height: 42px; 
+    z-index: 1000;
+    background-color: #000;
+    overflow: hidden; /* Recorta lo que sobre del widget original */
+    /* Sin border-bottom para evitar líneas dobles */
 }
 
-.ticker { 
-    display: flex;
-    width: max-content; 
-    animation: ticker 60s linear infinite; 
-    will-change: transform; 
+/* Ocultar copyright para limpiar espacio */
+.tradingview-widget-copyright {
+    display: none !important;
 }
 
-@keyframes ticker { 
-    0% { transform: translateX(0); } 
-    100% { transform: translateX(-50%); } 
+.tv-ticker-fixed .tradingview-widget-container {
+    position: absolute;
+    top: 0;
+    left: 50%; /* Paso 1: Mover al centro */
+    
+    /* Paso 2: Centrar matemáticamente y Escalar al 90% */
+    transform: translateX(-50%) scale(0.90); 
+    transform-origin: top center;
+    
+    /* Paso 3: Ancho compensado */
+    /* 100vw dividido 0.90 da 111.11vw. Usamos 112vw para seguridad */
+    width: 112vw !important; 
+    height: 100% !important;
 }
 
-.ticker-item { 
-    padding: 0 30px; 
-    font-family: 'JetBrains Mono', monospace; 
-    font-size: 12px; 
-    display: flex; 
-    align-items: center;
-    gap: 8px; 
-    color: #ccc;
-    white-space: nowrap;
+/* Ajuste del margen del contenido principal */
+.container {
+    max-width: 1600px; 
+    /* 42px de barra + 20px de aire = 62px */
+    margin: 62px auto 0; 
+    padding: 0 20px;
+    display: flex; flex-direction: column;
 }
 
 .positive { color: var(--success); }
@@ -127,7 +143,7 @@ header {
 }
 
 .competition-grid {
-    display: grid; grid-template-columns: 280px 1fr 340px; gap: 20px;
+    display: grid; grid-template-columns: 320px 1fr 340px; gap: 20px;
 }
 #explorer .competition-grid .card:first-child { height: 100%; }
 
@@ -187,8 +203,9 @@ header {
 
 .asset-item {
     display: grid; 
-    grid-template-columns: 1fr auto auto; 
-    gap: 8px;
+    /* Col 1: Info | Col 2: Tacho | Col 3: Precio | Col 4: Cambio */
+    grid-template-columns: 1fr 20px auto auto; 
+    gap: 10px; /* Un poco más de aire */
     align-items: center;
     padding: 12px 12px;
     border-bottom: 1px solid var(--border);
@@ -215,13 +232,22 @@ header {
     font-weight: 700; 
     font-size: 13px; 
     text-align: right;
-    background: transparent;
-    padding: 0;
-    min-width: auto;
+    color: #fff; /* SIEMPRE BLANCO */
+}
+
+.asset-change-mini {
+    font-family: 'JetBrains Mono', monospace; 
+    font-weight: 700; 
+    font-size: 11px; 
+    text-align: right;
+    min-width: 55px; /* Para que alineen bien */
 }
 
 .asset-price-mini.positive { color: var(--success); }
 .asset-price-mini.negative { color: var(--danger); }
+
+.asset-change-mini.positive { color: var(--success); }
+.asset-change-mini.negative { color: var(--danger); }
 
 .btn-remove {
     width: 20px; height: 20px;

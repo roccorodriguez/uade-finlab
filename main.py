@@ -18,7 +18,7 @@ MARKET_CONFIG_FILE = "market_config.json"
 METADATA_FILE = "asset_metadata.json"
 
 MARKET_DATA_CACHE = {"data": {}, "timestamp": 0} 
-CACHE_DURATION_SECONDS = 30
+CACHE_DURATION_SECONDS = 5
 
 SYMBOL_EXCEPTIONS = {
     "BTC": "BTC-USD",
@@ -102,13 +102,12 @@ def fetch_yfinance_data(force_update: bool = False):
         return MARKET_DATA_CACHE["data"]
 
     visible_symbols = load_market_config()
-
     student_db = load_db()
-    portfolio_symbols = set()
+    portfolio_symbols = builtins.set()
     for record in student_db.values():
         portfolio_symbols.update(record['portfolio'].keys())
     
-    all_needed_symbols = set(visible_symbols).union(portfolio_symbols)
+    all_needed_symbols = builtins.set(visible_symbols).union(portfolio_symbols)
 
     if not all_needed_symbols:
         return {}
@@ -119,7 +118,7 @@ def fetch_yfinance_data(force_update: bool = False):
     try:
         print(f"⬇ Descargando precios para: {tickers_to_download}")
 
-        data = yf.download(tickers_to_download, period="1d", group_by="ticker", progress=False)
+        data = yf.download(tickers_to_download, period="5d", group_by="ticker", progress=False)
         
         results = {}
         
@@ -134,38 +133,22 @@ def fetch_yfinance_data(force_update: bool = False):
                         continue
                     ticker_data = data[yf_ticker]
 
-                if ticker_data.empty:
+                history = ticker_data["Close"].dropna().astype(float)
+
+                if history.empty:
                     current_price = 0.0
                     change_percent = 0.0
                 else:
-                    raw_close = ticker_data["Close"].iloc[-1]
-                    raw_open = ticker_data["Open"].iloc[-1]
+                    current_price = float(history.iloc[-1])
 
-                    try:
-                        val_close = float(raw_close)
-                        if math.isnan(val_close) or math.isinf(val_close):
-                            current_price = 0.0
-                        else:
-                            current_price = val_close
-                    except:
-                        current_price = 0.0
-
-                    try:
-                        val_open = float(raw_open)
-                        if math.isnan(val_open) or math.isinf(val_open):
-                            open_price = 0.0
-                        else:
-                            open_price = val_open
-                    except:
-                        open_price = 0.0
-
-                    if open_price != 0:
-                        change_percent = ((current_price - open_price) / open_price) * 100
+                    if len(history) >= 2:
+                        pct_series = history.pct_change() * 100
+                        change_percent = float(pct_series.iloc[-1])
                     else:
                         change_percent = 0.0
 
-                    if math.isnan(change_percent) or math.isinf(change_percent):
-                        change_percent = 0.0
+                    if math.isnan(current_price) or math.isinf(current_price): current_price = 0.0
+                    if math.isnan(change_percent) or math.isinf(change_percent): change_percent = 0.0
 
                 meta_cache = load_metadata()
                 asset_meta = meta_cache.get(symbol, {})
@@ -178,7 +161,6 @@ def fetch_yfinance_data(force_update: bool = False):
                     "sector": asset_meta.get("sector", "General")
                 }
             except Exception as e:
-                print(f"⚠️ Error procesando {symbol}: {e}")
                 results[symbol] = {
                     "name": symbol, "price": 0.0, "change_percent": 0.0, "volatility": 0, "sector": "N/A"
                 }

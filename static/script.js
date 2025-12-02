@@ -3,7 +3,7 @@ const INITIAL_CAPITAL = 100000;
 const STUDENT_DB_URL = '/api/db/';
 
 let realTimePrices = {}; 
-let currentAsset = 'GGAL';
+let currentAsset = 'NVDA';
 let currentUser = null;
 let db = {};
 let chatHistory = {};
@@ -13,7 +13,7 @@ const countDownDate = new Date("Jan 27, 2026 00:00:00").getTime();
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp(); 
     
-    setInterval(fetchMarketDataAndLeaderboard, 10000); 
+    setInterval(fetchMarketDataAndLeaderboard, 5000); 
     setInterval(updateTimer, 1000); 
 });
 
@@ -24,7 +24,7 @@ async function initializeApp() {
         loadUserDataFromBackend(); 
         
         renderAssetList();
-        loadAsset('GGAL');
+        loadAsset('NVDA');
         
     } catch (e) {
         showToast('❌ Error crítico al iniciar el sistema.', 'error');
@@ -44,7 +44,7 @@ async function fetchMarketDataAndLeaderboard() {
 
         realTimePrices = marketData; 
         
-        renderAssetList(); 
+        renderAssetList();
         
         renderLeaderboard(leaderboardData); 
         
@@ -116,7 +116,7 @@ function studentLogout() {
     document.getElementById('loginPanel').style.display = 'flex';
 }
 
-function updateUIForUser(pricesUpdated = false) {
+function updateUIForUser() {
     if (!currentUser) return;
 
     const userData = db[currentUser.legajo];
@@ -140,8 +140,6 @@ function updateUIForUser(pricesUpdated = false) {
             }
         });
     }
-    
-    if(pricesUpdated) showToast('Precios actualizados', 'info');
 }
 
 async function executeOrder(type) {
@@ -239,6 +237,7 @@ function renderAssetList() {
 
         const activeClass = symbol === currentAsset ? 'active' : '';
         const priceClass = p.change_percent >= 0 ? 'positive' : 'negative';
+        const sign = p.change_percent > 0 ? '+': '';
 
         const trashIcon = `
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -259,8 +258,12 @@ function renderAssetList() {
                     ${trashIcon}
                 </button>
 
-                <div class="asset-price-mini ${priceClass}">
+                <div class="asset-price-mini">
                     $${p.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits:2})}
+                </div>
+
+                <div class="asset-change-mini ${priceClass}">
+                    ${sign}${p.change_percent.toFixed(2)}%
                 </div>
 
             </div>
@@ -273,8 +276,6 @@ function loadTradingViewChart(symbol) {
 
     if (["BTC", "ETH", "USDT", "BNB", "SOL"].includes(symbol)) {
         tvSymbol = `BINANCE:${symbol}USDT`;
-    } else if (["YPF", "GGAL", "BMA", "TECO2"].includes(symbol) && symbol.length === 4) {
-        tvSymbol = `NASDAQ:${symbol}`;
     }
         
     if (document.getElementById("tv_chart_container")) {
@@ -282,7 +283,7 @@ function loadTradingViewChart(symbol) {
 
         new TradingView.widget({
             "autosize": true,
-            "symbol": symbol,
+            "symbol": tvSymbol,
             "interval": "D",
             "timezone": "America/Argentina/Buenos_Aires",
             "theme": "dark",
@@ -321,6 +322,67 @@ function loadAsset(symbol) {
     
     loadTradingViewChart(symbol);
     renderChat(symbol); 
+}
+
+async function addNewAsset() {
+    const input = document.getElementById('newAssetInput');
+    const symbol = input.value.trim().toUpperCase();
+
+    if (!symbol) return showToast('⚠️ Escribe un símbolo', 'error');
+
+    const btn = document.querySelector('.search-container button');
+    const originalText = btn.innerText;
+    btn.innerText = "⌛";
+
+    try {
+        const response = await fetch("/api/market/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbol: symbol })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showToast(`✅ ${symbol} agregado correctamente.`, 'success');
+            input.value = '';
+
+            await fetchMarketDataAndLeaderboard();
+
+            loadAsset(symbol);
+        } else {
+            showToast(`❌ ${result.detail || 'Error al agregar'}`, 'error');
+        }
+    } catch (error) {
+        showToast('❌ Error al agregar activo', 'error');
+    } finally {
+        btn.innerText = originalText;
+    }
+}
+
+async function removeAsset(symbol) {
+    if (confirm(`¿Seguro que quieres eliminar ${symbol} de la pizarra?`)) {
+        try {
+            const response = await fetch(`/api/market/${symbol}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast(`🗑️ ${symbol} eliminado.`, 'success');
+
+                if (symbol === currentAsset) {
+                    const remaining = Object.keys(realTimePrices).filter(k => k !== symbol);
+                    if (remaining.length > 0) loadAsset(remaining[0]);
+                }
+
+                fetchMarketDataAndLeaderboard();
+            } else {
+                showToast('❌ Error al eliminar activo.', 'error');
+            }
+        } catch (e) {
+            showToast('❌ Error de conexión.', 'error');
+        }
+    }
 }
 
 function formatMoney(num) {
@@ -406,71 +468,4 @@ sendChatBtn.addEventListener("click", handleChat);
 
 function handleEnter(e) {
     if (e.key === 'Enter') addNewAsset();
-}
-
-async function addNewAsset() {
-    const input = document.getElementById('newAssetInput');
-    const symbol = input.value.trim().toUpperCase();
-
-    if (!symbol) return showToast('⚠️ Escribe un símbolo', 'error');
-
-    const btn = document.querySelector('.search-container button');
-    const originalText = btn.innerText;
-    btn.innerText = "⌛";
-
-    try {
-        const response = await fetch("/api/market/add", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ symbol: symbol })
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            showToast(`✅ ${symbol} agregado correctamente.`, 'success');
-            input.value = '';
-
-            await fetchMarketDataAndLeaderboard();
-
-            loadAsset(symbol);
-        } else {
-            showToast(`❌ ${result.detail || 'Error al agregar'}`, 'error');
-        }
-    } catch (error) {
-        showToast('❌ Error al agregar activo', 'error');
-    } finally {
-        btn.innerText = originalText;
-    }
-}
-
-async function removeAsset(symbol) {
-    const holdings = currentUser ? (db[currentUser.legajo]?.portfolio?.[symbol] || 0) : 0;
-    
-    if (holdings > 0) {
-        return showToast(`❌ Error: Tienes ${holdings} acciones de ${symbol}. Véndelas antes de borrar el activo de la lista.`, 'error');
-    }
-    
-    if (confirm(`¿Seguro que quieres eliminar ${symbol} de la pizarra?`)) {
-        try {
-            const response = await fetch(`/api/market/${symbol}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                showToast(`🗑️ ${symbol} eliminado.`, 'success');
-
-                if (symbol === currentAsset) {
-                    const remaining = Object.keys(realTimePrices).filter(k => k !== symbol);
-                    if (remaining.length > 0) loadAsset(remaining[0]);
-                }
-
-                fetchMarketDataAndLeaderboard();
-            } else {
-                showToast('❌ Error al eliminar activo.', 'error');
-            }
-        } catch (e) {
-            showToast('❌ Error de conexión.', 'error');
-        }
-    }
 }

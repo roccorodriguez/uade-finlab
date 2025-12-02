@@ -10,37 +10,44 @@
     <link rel="stylesheet" href="/static/styles.css?v=5">
 </head>
 <body>
-    <div class="ticker-wrap">
-        <div class="ticker">
-            <div class="ticker-item">🏆 COPA INVERSIONES UADE <span class="positive">● LIVE</span></div>
-            <div class="ticker-item">SPY <span class="positive">▲ 0.5%</span></div>
-            <div class="ticker-item">BTC <span class="positive">▲ 2.4%</span></div>
-            <div class="ticker-item">ETH <span class="positive">▲ 3.1%</span></div>
-            <div class="ticker-item">GGAL <span class="positive">▲ 3.2%</span></div>
-            <div class="ticker-item">YPF <span class="negative">▼ 0.4%</span></div>
-            <div class="ticker-item">MELI <span class="positive">▲ 1.2%</span></div>
-            <div class="ticker-item">NVDA <span class="positive">▲ 1.8%</span></div>
-            <div class="ticker-item">AAPL <span class="positive">▲ 0.8%</span></div>
-            <div class="ticker-item">MSFT <span class="positive">▲ 1.1%</span></div>
-            <div class="ticker-item">AMZN <span class="positive">▲ 1.5%</span></div>
-            <div class="ticker-item">GOOGL <span class="negative">▼ 0.2%</span></div>
-            <div class="ticker-item">TSLA <span class="negative">▼ 1.5%</span></div>
-
-            <div class="ticker-item">🏆 COPA INVERSIONES UADE <span class="positive">● LIVE</span></div>
-            <div class="ticker-item">SPY <span class="positive">▲ 0.5%</span></div>
-            <div class="ticker-item">BTC <span class="positive">▲ 2.4%</span></div>
-            <div class="ticker-item">ETH <span class="positive">▲ 3.1%</span></div>
-            <div class="ticker-item">GGAL <span class="positive">▲ 3.2%</span></div>
-            <div class="ticker-item">YPF <span class="negative">▼ 0.4%</span></div>
-            <div class="ticker-item">MELI <span class="positive">▲ 1.2%</span></div>
-            <div class="ticker-item">NVDA <span class="positive">▲ 1.8%</span></div>
-            <div class="ticker-item">AAPL <span class="positive">▲ 0.8%</span></div>
-            <div class="ticker-item">MSFT <span class="positive">▲ 1.1%</span></div>
-            <div class="ticker-item">AMZN <span class="positive">▲ 1.5%</span></div>
-            <div class="ticker-item">GOOGL <span class="negative">▼ 0.2%</span></div>
-            <div class="ticker-item">TSLA <span class="negative">▼ 1.5%</span></div>
+    <div class="tv-ticker-fixed">
+        <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/markets/" rel="noopener nofollow" target="_blank"><span class="blue-text">Ticker tape</span></a><span class="trademark"> by TradingView</span></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            {
+            "symbols": [
+                {
+                "proName": "FOREXCOM:SPXUSD",
+                "title": "S&P 500 Index"
+                },
+                {
+                "proName": "FOREXCOM:NSXUSD",
+                "title": "US 100 Cash CFD"
+                },
+                {
+                "proName": "FX_IDC:EURUSD",
+                "title": "EUR to USD"
+                },
+                {
+                "proName": "OANDA:XAUUSD",
+                "title": "Gold"
+                },
+                {
+                "proName": "TVC:SILVER",
+                "title": "Silver"
+                }
+            ],
+            "colorTheme": "dark",
+            "locale": "es", 
+            "largeChartUrl": "",
+            "isTransparent": false,
+            "showSymbolLogo": true,
+            "displayMode": "adaptive"
+            }
+            </script>
         </div>
-    </div>
+        </div>
 
     <div class="container">
         <header>
@@ -70,7 +77,7 @@
                         "dataSource": "SPX500",
                         "grouping": "sector",
                         "blockSize": "market_cap_basic",
-                        "blockColor": "change",
+                        "blockColor": "Perf.YTD",
                         "locale": "es",
                         "symbolUrl": "",
                         "colorTheme": "dark",
