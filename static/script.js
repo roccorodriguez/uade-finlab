@@ -98,20 +98,133 @@ async function loadUserDataFromBackend() {
     }
 }
 
-function studentLogin() {
-    const legajo = document.getElementById('legajoInput').value.trim();
-    if (!legajo) return showToast('⚠️ Ingresa un número de legajo', 'error');
+// De acá hasta studentlogout.
+// Variable de estado para saber si estamos en el paso 1 o 2
+let isWaitingForCode = false;
+let tempUsername = ""; // Guardamos el usuario mientras escribe el código
 
-    currentUser = { legajo }; 
-    loadUserDataFromBackend();
-
-    document.getElementById('loginPanel').style.display = 'none';
-    document.getElementById('tradingPanel').classList.add('active');
+function handleLoginEnter(e) {
+    if (e.key === 'Enter') handleLoginStep();
 }
 
+async function handleLoginStep() {
+    const input = document.getElementById('loginInput');
+    const val = input.value.trim();
+    const btn = document.getElementById('loginBtn');
+
+    if (!val) return showToast('⚠️ Campo vacío', 'error');
+
+    // === PASO 1: PEDIR CÓDIGO ===
+    if (!isWaitingForCode) {
+        tempUsername = val; // Guardamos "juan.perez"
+        
+        btn.innerText = "Enviando...";
+        input.disabled = true;
+
+        try {
+            const response = await fetch('/api/auth/request-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: tempUsername })
+            });
+            
+            const result = await response.json();
+
+            if (response.ok) {
+                // Cambiar la interfaz al Modo "Ingresar Código"
+                isWaitingForCode = true;
+                
+                showToast(`📧 ${result.message}`, 'success');
+                
+                // Actualizar UI
+                document.getElementById('loginTitle').innerText = "Verificar Identidad";
+                document.getElementById('loginSubtitle').innerText = `Ingresa el código enviado a ${tempUsername}@uade.edu.ar`;
+                input.value = ""; // Limpiar para que ponga el código
+                input.placeholder = "Código de 6 dígitos";
+                input.type = "number"; // Teclado numérico en celular
+                input.disabled = false;
+                input.focus();
+                
+                btn.innerText = "Verificar e Ingresar";
+                document.getElementById('loginFooter').innerHTML = `<a href="#" onclick="resetLogin()" style="color:#666">¿Te equivocaste de usuario? Volver</a>`;
+
+            } else {
+                showToast(`❌ ${result.detail}`, 'error');
+                btn.innerText = "Enviar Código";
+                input.disabled = false;
+            }
+        } catch (e) {
+            showToast('❌ Error de conexión', 'error');
+            btn.innerText = "Enviar Código";
+            input.disabled = false;
+        }
+
+    // === PASO 2: VERIFICAR CÓDIGO ===
+    } else {
+        const code = val;
+        btn.innerText = "Verificando...";
+        
+        try {
+            const response = await fetch('/api/auth/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario: tempUsername, code: code })
+            });
+            
+            const result = await response.json();
+
+            if (response.ok) {
+                // ¡LOGIN EXITOSO!
+                // Guardamos los datos recibidos
+                currentUser = { usuario: result.userId, ...result.userData };
+                db[currentUser.usuario] = result.userData; // Actualizamos caché local
+                
+                updateUIForUser();
+                
+                // Transición de pantalla
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('tradingPanel').classList.add('active');
+                showToast('🚀 Sesión iniciada correctamente', 'success');
+                
+                // Limpiar estado por si desloguea
+                resetLoginVariables();
+
+            } else {
+                showToast(`❌ ${result.detail}`, 'error');
+                btn.innerText = "Verificar e Ingresar";
+            }
+        } catch (e) {
+            showToast('❌ Error al verificar', 'error');
+            btn.innerText = "Verificar e Ingresar";
+        }
+    }
+}
+
+function resetLogin() {
+    isWaitingForCode = false;
+    tempUsername = "";
+    
+    const input = document.getElementById('loginInput');
+    input.value = "";
+    input.placeholder = "Ej: juan.perez";
+    input.type = "text";
+    input.disabled = false;
+    
+    document.getElementById('loginTitle').innerText = "Acceso Alumno";
+    document.getElementById('loginSubtitle').innerText = "Ingresa tu usuario UADE (sin @uade.edu.ar)";
+    document.getElementById('loginBtn').innerText = "Enviar Código";
+    document.getElementById('loginFooter').innerText = "Se enviará un código de verificación a tu mail institucional.";
+}
+
+function resetLoginVariables() {
+    isWaitingForCode = false;
+    tempUsername = "";
+}
+
+// Actualiza también la función studentLogout para resetear la UI
 function studentLogout() {
     currentUser = null;
-    document.getElementById('legajoInput').value = '';
+    resetLogin(); // Restauramos el panel de login al estado inicial
     document.getElementById('tradingPanel').classList.remove('active');
     document.getElementById('loginPanel').style.display = 'flex';
 }
@@ -119,8 +232,8 @@ function studentLogout() {
 function updateUIForUser() {
     if (!currentUser) return;
 
-    const userData = db[currentUser.legajo];
-    document.getElementById('userLegajo').innerText = currentUser.legajo;
+    const userData = db[currentUser.usuario];
+    document.getElementById('userLegajo').innerText = currentUser.usuario;
     document.getElementById('userBalance').innerText = formatMoney(userData.balance);
     document.getElementById('orderAsset').innerText = currentAsset;
     
@@ -147,7 +260,7 @@ async function executeOrder(type) {
     if (!qty || qty <= 0) return showToast('Cantidad inválida', 'error');
 
     const tradeData = {
-        legajo: currentUser.legajo,
+        usuario: currentUser.usuario,
         asset: currentAsset,
         quantity: qty,
         type: type
@@ -162,11 +275,11 @@ async function executeOrder(type) {
         const result = await response.json();
 
         if (response.ok) {
-            db[currentUser.legajo] = result.userData;
+            db[currentUser.usuario] = result.userData;
             currentUser.balance = result.userData.balance; 
             
             showToast(`✅ ${type === 'buy' ? 'Compra' : 'Venta'} Exitosa`, 'success');
-            addToFeed(currentUser.legajo, currentAsset, type.toUpperCase(), qty);
+            addToFeed(currentUser.usuario, currentAsset, type.toUpperCase(), qty);
             
             await fetchMarketDataAndLeaderboard(); 
 
@@ -206,12 +319,12 @@ function renderLeaderboard(students) {
         if(index === 2) rankClass = 'rank-3'; 
         
         const roiClass = s.roi >= 0 ? 'roi-positive' : 'roi-negative';
-        const rowBg = (currentUser && currentUser.legajo === s.legajo) ? 'background: rgba(255, 255, 255, 0.05);' : '';
+        const rowBg = (currentUser && currentUser.usuario === s.usuario) ? 'background: rgba(255, 255, 255, 0.05);' : '';
 
         tbody.innerHTML += `
             <tr style="${rowBg}">
                 <td><div class="rank-badge ${rankClass}">${rankIcon}</div></td>
-                <td style="font-family:'JetBrains Mono'; color:#fff;">${s.legajo}</td>
+                <td style="font-family:'JetBrains Mono'; color:#fff;">${s.usuario}</td>
                 <td style="text-align:right; font-family:'JetBrains Mono'">${formatMoney(s.total)}</td>
                 <td style="text-align:right" class="${roiClass}">${s.roi >=0 ? '+' : ''}${s.roi.toFixed(2)}%</td>
             </tr>

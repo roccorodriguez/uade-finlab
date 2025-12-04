@@ -10,6 +10,11 @@ import os
 import time
 import math
 import builtins
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import random
+import string
 
 app = FastAPI()
 
@@ -25,6 +30,13 @@ SYMBOL_EXCEPTIONS = {
     "ETH": "ETH-USD"
 }
 
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SENDER_EMAIL = "uadefinlab.bot@gmail.com"
+SENDER_PASSWORD = "abob xxsa zlay iisg"
+
+PENDING_CODES = {}
+
 class AssetData(BaseModel):
     name: str
     price: float
@@ -38,13 +50,13 @@ class UserPortfolio(BaseModel):
     initial: float
     
 class TradeRequest(BaseModel):
-    legajo: str
+    usuario: str
     asset: str
     quantity: int
     type: str
 
 class StudentRanking(BaseModel):
-    legajo: str
+    usuario: str
     total: float
     roi: float
 
@@ -53,10 +65,7 @@ class AddAssetRequest(BaseModel):
 
 def load_db():
     if not os.path.exists(DB_FILE):
-        initial_db = {
-            '999001': {'balance': 5000.0, 'portfolio': {'BTC': 1.05}, 'initial': 100000.0},
-            '999002': {'balance': 102000.0, 'portfolio': {}, 'initial': 100000.0},
-        }
+        initial_db = {}
         with open(DB_FILE, 'w') as f:
             json.dump(initial_db, f)
         return initial_db
@@ -173,6 +182,36 @@ def fetch_yfinance_data(force_update: bool = False):
         if MARKET_DATA_CACHE["data"]: return MARKET_DATA_CACHE["data"]
         return {}
 
+# Agregué esta nueva función.
+def send_verification_email(to_email: str, code: str):
+    try:
+        subject = "Código de Acceso - UADE Fin Lab"
+        body = f"""
+        <html>
+          <body>
+            <h2>Tu código de acceso es:</h2>
+            <h1 style="color: #2ebd85; font-size: 32px;">{code}</h1>
+            <p>Ingrésalo en la terminal para comenzar a operar.</p>
+          </body>
+        </html>
+        """
+
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'html'))
+
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error enviando email: {e}")
+        return False
+
 @app.get("/api/market-data", response_model=Dict[str, AssetData])
 def get_market_data():
     all_data = fetch_yfinance_data()
@@ -186,7 +225,7 @@ def get_leaderboard_data():
     current_prices = fetch_yfinance_data()
 
     students = []
-    for legajo, record in db.items():
+    for uid, record in db.items():
         holdings_value = 0
         
         for symbol, qty in record['portfolio'].items():
@@ -199,7 +238,7 @@ def get_leaderboard_data():
         roi = ((total_capital - initial) / initial) * 100 if initial else 0
 
         students.append({
-            'legajo': legajo,
+            'usuario': uid,
             'total': round(total_capital, 2),
             'roi': round(roi, 2)
         })
@@ -210,10 +249,10 @@ def get_leaderboard_data():
 @app.post("/api/trade")
 def execute_trade(req: TradeRequest):
     db = load_db()
-    user_data = db.get(req.legajo)
+    user_data = db.get(req.usuario)
     
     if not user_data:
-        raise HTTPException(status_code=404, detail="Legajo no encontrado.")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
         
     prices = fetch_yfinance_data()
     asset_price = prices.get(req.asset, {}).get("price")
@@ -240,7 +279,7 @@ def execute_trade(req: TradeRequest):
         if user_data['portfolio'][req.asset] < 0.001:
              user_data['portfolio'].pop(req.asset)
 
-    db[req.legajo] = user_data
+    db[req.usuario] = user_data
     save_db(db)
     
     return {"status": "success", "userData": user_data}
@@ -314,13 +353,13 @@ def remove_market_asset(symbol: str):
 
     return {"status": "success", "message": f"{symbol} eliminado de la vista."}
     
-@app.get("/api/db/{legajo}")
-def get_user_data(legajo: str):
+@app.get("/api/db/{usuario}")
+def get_user_data(usuario: str):
     db = load_db()
-    data = db.get(legajo)
+    data = db.get(usuario)
     if not data:
         data = {'balance': 100000.0, 'portfolio': {}, 'initial': 100000.0}
-        db[legajo] = data
+        db[usuario] = data
         save_db(db)
     return data
 
@@ -333,3 +372,65 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def read_index():
     return FileResponse('static/index.html')
+
+class LoginRequest(BaseModel):
+    usuario: str # Ahora usamos usuario UADE (ej: juan.perez), no legajo numérico
+
+class CodeVerification(BaseModel):
+    usuario: str
+    code: str
+
+# Agregué estos dos nuevos endpoints.
+@app.post("/api/auth/request-code")
+def request_code(req: LoginRequest):
+    """Paso 1: Recibe usuario, genera código y manda mail."""
+    usuario = req.usuario.strip().lower()
+    
+    # Construimos el mail institucional
+    email_destino = f"{usuario}@uade.edu.ar"
+    
+    # Generar código de 6 dígitos
+    code = ''.join(random.choices(string.digits, k=6))
+    
+    # Guardar en memoria (En un sistema real, esto iría a Redis con expiración)
+    PENDING_CODES[usuario] = code
+    
+    print(f"📨 Enviando código {code} a {email_destino}...")
+    
+    success = send_verification_email(email_destino, code)
+    
+    if not success:
+        raise HTTPException(status_code=500, detail="No se pudo enviar el correo. Verifica tu conexión.")
+        
+    return {"status": "success", "message": f"Código enviado a {email_destino}"}
+
+@app.post("/api/auth/verify-code")
+def verify_code(req: CodeVerification):
+    """Paso 2: Verifica el código y loguea al usuario."""
+    usuario = req.usuario.strip().lower()
+    
+    # Verificar si hay un código pendiente
+    if usuario not in PENDING_CODES:
+        raise HTTPException(status_code=400, detail="No hay solicitud de código para este usuario.")
+    
+    # Verificar si el código coincide
+    if PENDING_CODES[usuario] != req.code:
+        raise HTTPException(status_code=400, detail="Código incorrecto.")
+    
+    # ¡ÉXITO! Borramos el código usado
+    del PENDING_CODES[usuario]
+    
+    # Ahora hacemos lo que hacía antes el 'get_user_data': Cargar o Crear
+    db = load_db()
+    
+    # Usamos el 'usuario' (juan.perez) como ID en la base de datos ahora
+    user_data = db.get(usuario)
+    
+    if not user_data:
+        # Usuario nuevo: Regalo de bienvenida
+        user_data = {'balance': 100000.0, 'portfolio': {}, 'initial': 100000.0}
+        db[usuario] = user_data
+        save_db(db)
+        
+    # Devolvemos los datos del usuario para que el JS inicie la sesión
+    return {"status": "success", "userData": user_data, "userId": usuario}

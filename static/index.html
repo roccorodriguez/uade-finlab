@@ -146,12 +146,17 @@
                     <div id="loginPanel" class="login-panel" style="padding: 30px;">
                         <div style="margin-bottom: 20px;">
                             <div style="font-size: 40px; margin-bottom: 10px;">🔐</div>
-                            <h3>Acceso Alumno</h3>
-                            <p style="font-size: 12px; color: var(--text-muted);">Ingresa tu legajo para operar</p>
+                            <h3 id="loginTitle">Acceso Alumno</h3>
+                            <p id="loginSubtitle" style="font-size: 12px; color: var(--text-muted);">Ingresa tu usuario UADE (sin @uade.edu.ar)</p>
                         </div>
-                        <input type="number" id="legajoInput" class="login-input" placeholder="Ej: 1122334">
-                        <button class="login-btn" onclick="studentLogin()">Ingresar a Terminal</button>
-                        <p style="font-size: 10px; color: var(--text-muted); margin-top: 15px;">*Si es tu primera vez, se te asignarán $100,000 USD virtuales.</p>
+                        
+                        <input type="text" id="loginInput" class="login-input" placeholder="Ej: juan.perez" onkeypress="handleLoginEnter(event)">
+                        
+                        <button id="loginBtn" class="login-btn" onclick="handleLoginStep()">Enviar Código</button>
+                        
+                        <p id="loginFooter" style="font-size: 10px; color: var(--text-muted); margin-top: 15px;">
+                            Se enviará un código de verificación a tu mail institucional.
+                        </p>
                     </div>
 
                     <div id="tradingPanel" class="trade-interface" style="padding: 20px;">
