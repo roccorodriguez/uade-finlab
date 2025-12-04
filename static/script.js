@@ -385,10 +385,21 @@ function renderAssetList() {
 }
 
 function loadTradingViewChart(symbol) {
-    let tvSymbol = `NASDAQ:${symbol}`;
+    // 1. Por defecto: Usamos el símbolo limpio.
+    // TradingView es inteligente y encontrará KO en NYSE o MSFT en NASDAQ automáticamente.
+    let tvSymbol = symbol;
 
-    if (["BTC", "ETH", "USDT", "BNB", "SOL"].includes(symbol)) {
-        tvSymbol = `BINANCE:${symbol}USDT`;
+    // 2. Excepción Berkshire Hathaway (El ticker 'BRK' no existe, es BRK.B)
+    if (symbol === 'BRK') {
+        tvSymbol = 'NYSE:BRK.B';
+    }
+    // 3. Excepciones Argentinas (ADRs): Forzamos mercado USA para ver DÓLARES
+    // Si no hacemos esto, a veces carga el gráfico de Buenos Aires en Pesos.
+    else if (['GGAL', 'MELI'].includes(symbol)) {
+        tvSymbol = `NASDAQ:${symbol}`;
+    }
+    else if (['YPF', 'BMA', 'EDN', 'PAM', 'LOMA', 'TECO2', 'CRESY', 'IRS', 'TGS'].includes(symbol)) {
+        tvSymbol = `NYSE:${symbol}`;
     }
         
     if (document.getElementById("tv_chart_container")) {
@@ -396,7 +407,7 @@ function loadTradingViewChart(symbol) {
 
         new TradingView.widget({
             "autosize": true,
-            "symbol": tvSymbol,
+            "symbol": tvSymbol, 
             "interval": "D",
             "timezone": "America/Argentina/Buenos_Aires",
             "theme": "dark",
@@ -415,6 +426,7 @@ function loadTradingViewChart(symbol) {
 }
 
 function loadAsset(symbol) {
+    // Fallback si no hay precios
     if (!realTimePrices[symbol] && Object.keys(realTimePrices).length > 0) {
         symbol = Object.keys(realTimePrices)[0];
     }
@@ -422,13 +434,23 @@ function loadAsset(symbol) {
     currentAsset = symbol;
     const data = realTimePrices[symbol] || { name: symbol, sector: 'General', volatility: 0 };
 
+    // Actualizar Textos
     if(document.getElementById('metaName')) document.getElementById('metaName').innerText = data.name;
     if(document.getElementById('metaSector')) document.getElementById('metaSector').innerText = data.sector;
     if(document.getElementById('metaVol')) document.getElementById('metaVol').innerText = (data.volatility * 100).toFixed(1) + '%';
     if(document.getElementById('chat-context-asset')) document.getElementById('chat-context-asset').innerText = symbol;
     
-    const targets = ['Strong Buy', 'Hold', 'Sell', 'Accumulate'];
-    if(document.getElementById('metaTarget')) document.getElementById('metaTarget').innerText = targets[Math.floor(Math.random()*targets.length)];
+    // --- NUEVA LÓGICA DEL BOTÓN ---
+    const btnTv = document.getElementById('btnTradingView');
+    if (btnTv) {
+        // Corrección para Berkshire Hathaway
+        let searchSymbol = symbol;
+        if (symbol === 'BRK') searchSymbol = 'BRK.B';
+        
+        // Generamos el link de búsqueda de TradingView
+        btnTv.href = `https://es.tradingview.com/symbols/${searchSymbol}/`;
+    }
+    // ------------------------------
 
     renderAssetList();
     if(currentUser) updateUIForUser();

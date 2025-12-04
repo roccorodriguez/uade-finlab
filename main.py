@@ -300,22 +300,28 @@ def add_market_asset(req: AddAssetRequest):
         print(f"🔍 Verificando {symbol} ({yf_ticker}) en Yahoo...")
         ticker_obj = yf.Ticker(yf_ticker)
 
-        try:
-            _ = ticker_obj.fast_info["last_price"]
-        except:
-            hist = ticker_obj.history(period="1d")
-            if hist.empty:
-                raise Exception("No data found")
+        # 1. VALIDACIÓN Y PRECIO (Usando history directo, no el motor global)
+        # Pedimos 5 días para ser consistentes con la lógica del sistema
+        history = ticker_obj.history(period="5d")
         
-        all_prices = fetch_yfinance_data(force_update=True)
-
-        current_price = all_prices.get(symbol, {}).get("price", 0.0)
-
-        if current_price == 0.0:
-            raise HTTPException(status_code=404, detail=f"El activo {symbol} no tiene precio operable disponible.")
+        if history.empty:
+            raise Exception("No data found")
+            
+        # Obtenemos el último cierre válido
+        last_close = history["Close"].iloc[-1]
         
+        # Si es NaN o 0, rechazamos
+        if pd.isna(last_close) or float(last_close) == 0:
+             raise HTTPException(status_code=404, detail=f"El activo {symbol} no tiene precio operable.")
+
+        # 2. VALIDAR TIPO DE ACTIVO (Tu restricción de Criptos)
         info = ticker_obj.info
+        quote_type = info.get("quoteType", "").upper()
+        
+        if quote_type == "CRYPTOCURRENCY":
+            raise HTTPException(status_code=400, detail="⚠️ Las Criptomonedas están deshabilitadas temporalmente. Solo Acciones.")
 
+        # 3. GUARDAR METADATA
         asset_name = info.get("shortName", info.get("longName", symbol))
         asset_sector = info.get("sector", "General")
         asset_volatility = info.get("beta", 1.0)
@@ -328,17 +334,25 @@ def add_market_asset(req: AddAssetRequest):
         }
         save_metadata(metadata)
 
+        # 4. AGREGAR A LA LISTA
         config.insert(0, symbol)
         save_market_config(config)
+
+        # 5. AHORA SÍ: Forzar actualización del motor global
+        # Como ya lo guardamos en el paso 4, ahora el motor sí lo verá
+        fetch_yfinance_data(force_update=True)
 
         return {
             "status": "success",
             "message": f"{symbol} agregado correctamente.",
             "data": metadata[symbol]
         }
+
+    except HTTPException as e:
+        raise e
     except Exception as e:
         print(f"❌ Error agregando {symbol}: {e}")
-        raise HTTPException(status_code=404, detail=f"No se encontró el activo '{symbol}' en el mercado o hubo error de conexión.")
+        raise HTTPException(status_code=404, detail=f"No se encontró el activo '{symbol}' o error de conexión.")
 
 @app.delete("/api/market/{symbol}")
 def remove_market_asset(symbol: str):

@@ -417,3 +417,36 @@ header {
 #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+/* Botón TradingView (Estilo Permanente) */
+.btn-tv {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+    
+    /* Estilo fijo (Lo que antes era el hover) */
+    background-color: rgba(255, 255, 255, 0.05); 
+    border: 1px solid #444; /* Borde visible */
+    color: #fff; /* Texto blanco siempre */
+    
+    border-radius: 4px;
+    text-decoration: none;
+    
+    /* Tipografía técnica */
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    transition: all 0.1s ease;
+}
+
+/* Feedback táctil: Se ilumina un poco más al tocar */
+.btn-tv:active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #fff;
+    transform: translateY(1px); /* Efecto de botón presionado */
+}
