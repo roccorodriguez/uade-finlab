@@ -196,7 +196,7 @@ def send_verification_email(to_email: str, code: str):
     # Datos del correo
     payload = {
         "sender": {
-            "name": "UADE Fin Lab",
+            "name": "FIN LAB bot",
             "email": "uadefinlab.bot@gmail.com" # Tiene que ser el mail que verificaste en Brevo
         },
         "to": [
