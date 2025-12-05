@@ -10,7 +10,7 @@ import os
 import time
 import math
 import builtins
-import smtplib
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
@@ -184,31 +184,58 @@ def fetch_yfinance_data(force_update: bool = False):
 
 # Agregué esta nueva función.
 def send_verification_email(to_email: str, code: str):
-    try:
-        subject = "Código de Acceso - UADE Fin Lab"
-        body = f"""
-        <html>
-          <body>
-            <h2>Tu código de acceso es:</h2>
-            <h1 style="color: #2ebd85; font-size: 32px;">{code}</h1>
-            <p>Ingrésalo en la terminal para comenzar a operar.</p>
-          </body>
-        </html>
+    # Clave de API desde Render
+    api_key = os.getenv("BREVO_API_KEY")
+    
+    if not api_key:
+        print("❌ Error: Falta configurar BREVO_API_KEY")
+        return False
+
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    # Datos del correo
+    payload = {
+        "sender": {
+            "name": "UADE Fin Lab",
+            "email": "uadefinlab.bot@gmail.com" # Tiene que ser el mail que verificaste en Brevo
+        },
+        "to": [
+            {
+                "email": to_email,
+                "name": "Estudiante UADE"
+            }
+        ],
+        "subject": "Código de Acceso - UADE Fin Lab",
+        "htmlContent": f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+            <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; text-align: center;">
+                <h2 style="color: #333;">Código de Verificación</h2>
+                <h1 style="color: #2ebd85; font-size: 48px; letter-spacing: 5px; margin: 20px 0;">{code}</h1>
+                <p style="font-size: 12px; color: #999;">Ingrésalo en la terminal.</p>
+            </div>
+        </div>
         """
+    }
 
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = to_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'html'))
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "api-key": api_key
+    }
 
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        
+        # Si responde 201 (Creado), salió bien.
+        if response.status_code == 201:
+            print(f"✅ Email enviado vía Brevo API a {to_email}")
+            return True
+        else:
+            print(f"❌ Error Brevo: {response.text}")
+            return False
+            
     except Exception as e:
-        print(f"Error enviando email: {e}")
+        print(f"❌ Error de conexión API: {e}")
         return False
 
 @app.get("/api/market-data", response_model=Dict[str, AssetData])
