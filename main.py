@@ -188,7 +188,7 @@ def send_verification_email(to_email: str, code: str):
     api_key = os.getenv("BREVO_API_KEY")
     
     if not api_key:
-        print("❌ Error: Falta configurar BREVO_API_KEY")
+        print(" Error: Falta configurar BREVO_API_KEY")
         return False
 
     url = "https://api.brevo.com/v3/smtp/email"
