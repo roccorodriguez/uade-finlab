@@ -264,23 +264,57 @@ function updateUIForUser() {
     if (!currentUser) return;
 
     const userData = db[currentUser.usuario];
+    
+    // Actualizar datos básicos
     document.getElementById('userLegajo').innerText = currentUser.usuario;
     document.getElementById('userBalance').innerText = formatMoney(userData.balance);
     document.getElementById('orderAsset').innerText = currentAsset;
     
+    // Actualizar precio en el panel de orden
     const currentPrice = realTimePrices[currentAsset] ? realTimePrices[currentAsset].price : 0.00;
     document.getElementById('orderPrice').innerText = formatMoney(currentPrice);
 
+    // --- NUEVA LÓGICA: BLOQUEAR BOTÓN DE VENTA ---
+    const sellBtn = document.querySelector('.btn-sell');
+    const ownedQty = userData.portfolio[currentAsset] || 0; // Cantidad que tiene del activo actual
+
+    if (sellBtn) {
+        if (ownedQty > 0) {
+            // Si tiene acciones: Habilitamos botón
+            sellBtn.disabled = false;
+            sellBtn.style.opacity = "1";
+            sellBtn.style.cursor = "pointer";
+            sellBtn.title = "Vender acciones"; 
+        } else {
+            // Si NO tiene acciones: Bloqueamos botón
+            sellBtn.disabled = true;
+            sellBtn.style.opacity = "0.3"; // Lo hacemos transparente
+            sellBtn.style.cursor = "not-allowed"; // Icono de prohibido al pasar el mouse
+            sellBtn.title = "No tenés acciones de esta empresa para vender";
+        }
+    }
+    // ----------------------------------------------
+
+    // Renderizar lista de portafolio
     const list = document.getElementById('holdingsList');
     list.innerHTML = '';
     const entries = Object.entries(userData.portfolio);
-    if(entries.length === 0) list.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Sin activos</div>';
-    else {
+    
+    if(entries.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:20px; color:#555;">Sin activos</div>';
+    } else {
         entries.forEach(([symbol, qty]) => {
             if (qty > 0) {
                 const assetPrice = realTimePrices[symbol] ? realTimePrices[symbol].price : 0;
                 const totalVal = qty * assetPrice;
-                list.innerHTML += `<div class="holding-item"><div><strong style="color:#fff">${symbol}</strong> <span style="color:#aaa">(${qty})</span></div><div>${formatMoney(totalVal)}</div></div>`;
+                list.innerHTML += `
+                    <div class="holding-item">
+                        <div>
+                            <strong style="color:#fff">${symbol}</strong> 
+                            <span style="color:#aaa">(${qty})</span>
+                        </div>
+                        <div>${formatMoney(totalVal)}</div>
+                    </div>`;
             }
         });
     }
@@ -289,6 +323,16 @@ function updateUIForUser() {
 async function executeOrder(type) {
     const qty = parseInt(document.getElementById('orderQty').value);
     if (!qty || qty <= 0) return showToast('Cantidad inválida', 'error');
+
+    // --- AGREGAR ESTO: VALIDACIÓN DE VENTA ---
+    if (type === 'sell') {
+        // Buscamos cuántas tiene realmente en el portafolio local
+        const owned = db[currentUser.usuario].portfolio[currentAsset] || 0;
+        
+        if (qty > owned) {
+            return showToast(`❌ Error: Solo tienes ${owned} acciones para vender.`, 'error');
+        }
+    }
 
     const tradeData = {
         usuario: currentUser.usuario,
@@ -342,7 +386,7 @@ function renderLeaderboard(students) {
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
 
-    students.slice(0, 8).forEach((s, index) => { 
+    students.forEach((s, index) => { 
         let rankClass = 'rank-other';
         let rankIcon = index + 1;
         if(index === 0) { rankClass = 'rank-1'; rankIcon = '♛'; }

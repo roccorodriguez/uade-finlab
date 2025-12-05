@@ -271,8 +271,18 @@ def execute_trade(req: TradeRequest):
         
     elif req.type == 'sell':
         current_qty = user_data['portfolio'].get(req.asset, 0)
-        if current_qty < req.quantity:
-            raise HTTPException(status_code=400, detail=f"Solo tienes {current_qty} acciones de {req.asset}.")
+        
+        # --- CORRECCIÓN: VALIDACIÓN ESTRICTA ---
+        # Si la cantidad solicitada es MAYOR a la tenencia, cortamos acá.
+        if req.quantity > current_qty:
+            raise HTTPException(status_code=400, detail=f"Operación rechazada: Solo tienes {current_qty} acciones de {req.asset}.")
+            
+        user_data['balance'] += total_cost
+        user_data['portfolio'][req.asset] -= req.quantity
+        
+        # Limpieza de residuos (decimales muy chicos)
+        if user_data['portfolio'][req.asset] < 0.001:
+             user_data['portfolio'].pop(req.asset)
             
         user_data['balance'] += total_cost
         user_data['portfolio'][req.asset] -= req.quantity

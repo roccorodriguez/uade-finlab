@@ -383,30 +383,71 @@ header {
 .trade-interface { display: none; flex-direction: column; height: 100%; }
 .trade-interface.active { display: flex; }
 
+/* Busca y reemplaza este bloque en tu styles.css */
+
 .student-badge {
-    background: #000; padding: 15px; border-radius: 4px;
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    background: #000; 
+    padding: 15px; 
+    border-radius: 4px;
+    
+    /* ESTAS 3 LÍNEAS SON CLAVE PARA QUE EL BOTÓN ESTÉ A LA DERECHA */
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    
+    margin-bottom: 20px;
     border: 1px solid var(--border);
 }
-.student-info h4 { font-size: 12px; color: var(--text-muted); }
-.student-info h2 { font-family: 'JetBrains Mono'; font-size: 18px; color: #fff; }
 
+.student-info h4 { 
+    font-size: 11px; 
+    color: var(--text-muted); 
+    
+    /* Eliminé text-transform: uppercase para que respete minúsculas */
+    letter-spacing: 1px;
+    margin-bottom: 8px; 
+}
+
+.student-info h2 { 
+    font-family: 'JetBrains Mono'; 
+    font-size: 20px; /* Un pelín más grande */
+    color: #fff; 
+    margin-bottom: 2px;
+}
+
+/* CAMBIO 3: Botón de Logout Rediseñado */
 .logout-btn { 
-    background: rgba(242, 54, 69, 0.1); 
+    background: transparent; /* Fondo limpio */
     border: 1px solid var(--danger); 
     color: var(--danger);
-    padding: 8px 12px;
-    border-radius: 4px;
+    
+    padding: 8px 18px; /* Más ancho para que respire */
+    border-radius: 6px; /* Bordes más suaves */
+    
+    font-family: 'JetBrains Mono', monospace; /* Fuente técnica */
     font-size: 11px;
-    font-weight: bold;
-    cursor: pointer;
+    font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
+    gap: 8px;
+    transition: all 0.2s ease;
 }
-.logout-btn:hover { background: var(--danger); color: #fff; }
+
+.logout-btn:hover { 
+    background: var(--danger); 
+    color: #fff; 
+    box-shadow: 0 4px 15px rgba(242, 54, 69, 0.4); /* Efecto de luz roja (Glow) */
+    transform: translateY(-1px); /* Pequeña elevación */
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
 
 .order-form { background: #0a0a0a; padding: 20px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 20px; }
 .input-group { margin-bottom: 15px; }
@@ -461,7 +502,11 @@ header {
     border-radius: 4px; padding: 16px; position: fixed; z-index: 2000; bottom: 30px; left: 50%; 
     transform: translateX(-50%); font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-weight: bold;
 }
-#toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+#toast.show { 
+    visibility: visible; 
+    /* Agregué 'forwards' al final para que se congele al terminar */
+    animation: fadein 0.5s, fadeout 0.5s 2.5s forwards; 
+}
 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
