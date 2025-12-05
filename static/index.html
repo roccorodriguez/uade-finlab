@@ -56,16 +56,16 @@
                 <p style="font-size: 12px; color: var(--text-muted);">Terminal de Trading Institucional</p>
             </div>
             <div class="market-status">
-                <div class="status-pill"><div class="status-dot"></div> MERCADO ABIERTO</div>
-                <div class="status-pill" style="border-color: var(--border);">🏆 CIERRE COPA: <span id="competitionTimer" style="margin-left:5px; font-family:'JetBrains Mono'; font-weight:bold; color:var(--gold);">00d 00h 00m 00s</span></div>
+                <div id="marketStatusPill" class="status-pill">
+                    <div class="status-dot"></div> 
+                    <span id="marketStatusText">MERCADO ABIERTO</span>
+                </div>
+            
+                <div class="status-pill" style="border-color: var(--border);">
+                    🏆 CIERRE COPA: <span id="competitionTimer" style="margin-left:5px; font-family:'JetBrains Mono'; font-weight:bold; color:var(--gold);">00d 00h 00m 00s</span>
+                </div>
             </div>
         </header>
-
-        <div class="nav-tabs">
-            <div class="nav-tab" onclick="switchTab('markets', this)">Global Heatmap</div>
-            <div class="nav-tab active" onclick="switchTab('explorer', this)">Trading Competition</div>
-            <div class="nav-tab" onclick="switchTab('analysis', this)">AI Strategy & Chart</div>
-        </div>
 
         <div id="markets" class="section">
             <div class="card" style="height: 100%; display: flex; flex-direction: column; padding: 0; border: none;">
@@ -255,6 +255,12 @@
             </div>
         </div>
 
+    </div>
+
+    <div class="nav-tabs">
+        <div class="nav-tab" onclick="switchTab('markets', this)">Global Heatmap</div>
+        <div class="nav-tab active" onclick="switchTab('explorer', this)">Trading Competition</div>
+        <div class="nav-tab" onclick="switchTab('analysis', this)">AI Strategy & Chart</div>
     </div>
 
     <div id="toast">Notificación</div>

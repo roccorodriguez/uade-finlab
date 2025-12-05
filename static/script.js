@@ -13,6 +13,8 @@ const countDownDate = new Date("Jan 27, 2026 00:00:00").getTime();
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp(); 
     
+    updateMarketStatus();
+    setInterval(updateMarketStatus, 60000);
     setInterval(fetchMarketDataAndLeaderboard, 5000); 
     setInterval(updateTimer, 1000); 
 });
@@ -53,6 +55,35 @@ async function fetchMarketDataAndLeaderboard() {
     } catch (error) {
         showToast('⚠️ No se pudieron cargar los precios en tiempo real.', 'error');
         console.error("Error fetching market data:", error);
+    }
+}
+
+function updateMarketStatus() {
+    const now = new Date();
+    const day = now.getDay(); // 0 = Domingo, 6 = Sábado
+    const hour = now.getHours();
+
+    // Lunes (1) a Viernes (5)
+    const isWeekday = day >= 1 && day <= 5;
+    
+    // Horario: 11:00 a 16:59 (Se cierra a las 17:00 en punto)
+    const isOpenTime = hour >= 11 && hour < 17; 
+
+    // Referencias al HTML
+    const pill = document.getElementById('marketStatusPill');
+    const text = document.getElementById('marketStatusText');
+    
+    // Si no encuentra los elementos (por error de HTML), salimos para no romper todo
+    if (!pill || !text) return;
+
+    if (isWeekday && isOpenTime) {
+        // ABIERTO
+        pill.classList.remove('status-closed');
+        text.innerText = "MERCADO ABIERTO";
+    } else {
+        // CERRADO
+        pill.classList.add('status-closed');
+        text.innerText = "MERCADO CERRADO";
     }
 }
 

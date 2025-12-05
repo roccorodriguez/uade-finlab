@@ -97,26 +97,73 @@ header {
 }
 .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
 
-.nav-tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-shrink: 0; }
-.nav-tab {
-    padding: 10px 24px; background: transparent; border: 1px solid transparent;
-    color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 600;
-    border-radius: 4px; transition: all 0.2s;
+/* ================= NAVEGACIÓN INFERIOR (Sin Bordes) ================= */
+
+.nav-tabs { 
+    display: flex; 
+    gap: 15px; 
+    
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    
+    height: 90px; 
+    padding-bottom: 20px; 
+    
+    justify-content: center; 
+    align-items: center; 
+    
+    background-color: var(--bg-dark); 
+    
+    /* CAMBIO AQUÍ: Quitamos la línea de arriba */
+    border-top: none; 
+    
+    z-index: 1000;
+    margin: 0;
+    box-sizing: border-box;
 }
-.nav-tab:hover { background: var(--bg-panel); color: #fff; }
+
+.nav-tab {
+    /* TAMAÑO MÁS GRANDE */
+    padding: 14px 30px; 
+    font-size: 16px; /* Letra más grande */
+    font-weight: 600;
+    
+    background: transparent; 
+    border: 1px solid transparent;
+    color: var(--text-muted); 
+    border-radius: 6px; 
+    transition: all 0.2s;
+    
+    /* CURSOR Y SELECCIÓN (Arreglo del texto) */
+    cursor: pointer; /* Fuerza la manito */
+    user-select: none; /* Prohíbe seleccionar el texto */
+    -webkit-user-select: none; /* Para Safari/Chrome */
+}
+
+.nav-tab:hover { 
+    background: var(--bg-panel); 
+    color: #fff; 
+}
+
 .nav-tab.active {
-    background: var(--bg-panel); border: 1px solid var(--border); color: #fff;
+    background: var(--bg-panel); 
+    border: 1px solid var(--border); 
+    color: #fff;
     box-shadow: none; 
-    border-bottom: 1px solid var(--border);
 }
 
 .section { display: none; padding-bottom: 20px; animation: fadeUp 0.4s ease; }
 .section.active { display: block; }
 
-#markets, .competition-grid, .analysis-grid {
-    height: calc(100vh - 270px); 
-}
+/* EN styles.css */
 
+#markets, .competition-grid, .analysis-grid {
+    /* Ajustamos para la nueva barra más alta: 100vh - 270px */
+    height: calc(100vh - 270px);
+    margin-bottom: 10px;
+}
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .card {
@@ -449,4 +496,28 @@ header {
     background-color: rgba(255, 255, 255, 0.1);
     border-color: #fff;
     transform: translateY(1px); /* Efecto de botón presionado */
+}
+
+/* Estado Cerrado (Rojo) */
+.status-closed {
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+}
+
+.status-closed .status-dot {
+    background-color: var(--danger);
+    box-shadow: none;
+    animation: none; /* Deja de parpadear */
+}
+
+/* Animación de "Vivo" para el estado Abierto (Verde) */
+@keyframes pulseLive {
+    0% { opacity: 1; box-shadow: 0 0 0 0 rgba(46, 189, 133, 0.7); }
+    70% { opacity: 1; box-shadow: 0 0 0 4px rgba(46, 189, 133, 0); }
+    100% { opacity: 1; box-shadow: 0 0 0 0 rgba(46, 189, 133, 0); }
+}
+
+.status-dot {
+    /* Aseguramos que tenga la animación por defecto */
+    animation: pulseLive 2s infinite;
 }

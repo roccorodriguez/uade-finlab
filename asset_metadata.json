@@ -68,5 +68,15 @@
         "name": "Berkshire Hathaway Inc.",
         "sector": "Financial Services",
         "volatility": 0.709
+    },
+    "CEPU": {
+        "name": "Central Puerto S.A.",
+        "sector": "Utilities",
+        "volatility": -0.01
+    },
+    "BBAR": {
+        "name": "Banco BBVA Argentina S.A.",
+        "sector": "Financial Services",
+        "volatility": 0.165
     }
 }
