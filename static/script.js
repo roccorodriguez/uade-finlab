@@ -34,6 +34,8 @@ async function initializeApp() {
     }
 }
 
+let errorCount = 0; // Contador de errores consecutivos
+
 async function fetchMarketDataAndLeaderboard() {
     try {
         const [marketResponse, leaderboardResponse] = await Promise.all([
@@ -41,20 +43,29 @@ async function fetchMarketDataAndLeaderboard() {
             fetch('/api/leaderboard')
         ]);
 
+        if (!marketResponse.ok || !leaderboardResponse.ok) throw new Error("Error en API");
+
         const marketData = await marketResponse.json();
         const leaderboardData = await leaderboardResponse.json();
 
         realTimePrices = marketData; 
-        
         renderAssetList();
-        
         renderLeaderboard(leaderboardData); 
         
         if (currentUser) updateUIForUser(true); 
 
+        // Si tuvo éxito, reseteamos el contador
+        errorCount = 0; 
+
     } catch (error) {
-        showToast('⚠️ No se pudieron cargar los precios en tiempo real.', 'error');
-        console.error("Error fetching market data:", error);
+        console.warn("⚠️ Fallo silencioso al actualizar mercado:", error);
+        errorCount++;
+
+        // Solo mostramos el Toast rojo si falla 3 veces seguidas (15 segundos sin datos)
+        if (errorCount >= 3) {
+            showToast('⚠️ Conexión inestable con el mercado.', 'error');
+            errorCount = 0; // Reiniciamos para no spammear
+        }
     }
 }
 
@@ -321,18 +332,40 @@ function updateUIForUser() {
 }
 
 async function executeOrder(type) {
-    const qty = parseInt(document.getElementById('orderQty').value);
+    const qtyInput = document.getElementById('orderQty');
+    const qty = parseInt(qtyInput.value);
+    
+    // Referencias a los botones
+    const btnBuy = document.querySelector('.btn-buy');
+    const btnSell = document.querySelector('.btn-sell');
+
     if (!qty || qty <= 0) return showToast('Cantidad inválida', 'error');
 
-    // --- AGREGAR ESTO: VALIDACIÓN DE VENTA ---
+    // Validación de venta local (tu lógica actual)
     if (type === 'sell') {
-        // Buscamos cuántas tiene realmente en el portafolio local
         const owned = db[currentUser.usuario].portfolio[currentAsset] || 0;
-        
         if (qty > owned) {
             return showToast(`❌ Error: Solo tienes ${owned} acciones para vender.`, 'error');
         }
     }
+
+    // --- BLOQUEO DE SEGURIDAD (NUEVO) ---
+    // 1. Guardamos el texto original para restaurarlo luego
+    const originalText = type === 'buy' ? btnBuy.innerText : btnSell.innerText;
+    
+    // 2. Deshabilitamos AMBOS botones para evitar conflictos
+    btnBuy.disabled = true;
+    btnSell.disabled = true;
+    
+    // 3. Feedback visual: Ponemos un relojito o "..." en el botón presionado
+    if (type === 'buy') btnBuy.innerText = "⏳ ...";
+    else btnSell.innerText = "⏳ ...";
+
+    // Modificamos el estilo para que parezcan apagados
+    btnBuy.style.opacity = "0.5";
+    btnSell.style.opacity = "0.5";
+    btnBuy.style.cursor = "wait";
+    btnSell.style.cursor = "wait";
 
     const tradeData = {
         usuario: currentUser.usuario,
@@ -352,10 +385,12 @@ async function executeOrder(type) {
         if (response.ok) {
             db[currentUser.usuario] = result.userData;
             currentUser.balance = result.userData.balance; 
-            
+            currentUser.portfolio = result.userData.portfolio; // Importante actualizar portafolio
+
             showToast(`✅ ${type === 'buy' ? 'Compra' : 'Venta'} Exitosa`, 'success');
             addToFeed(currentUser.usuario, currentAsset, type.toUpperCase(), qty);
             
+            // Recargamos datos para actualizar ranking y UI
             await fetchMarketDataAndLeaderboard(); 
 
         } else {
@@ -364,6 +399,21 @@ async function executeOrder(type) {
 
     } catch (error) {
         showToast('❌ Error de conexión con el servidor de trading', 'error');
+    } finally {
+        // --- RESTAURACIÓN (SIEMPRE SE EJECUTA) ---
+        // Volvemos todo a la normalidad, haya funcionado o fallado
+        btnBuy.disabled = false;
+        // El de venta depende de updateUIForUser, pero por seguridad lo habilitamos primero
+        btnSell.disabled = false; 
+
+        btnBuy.innerText = "Comprar"; // Texto original hardcodeado o variable
+        btnSell.innerText = "Vender";
+        
+        btnBuy.style.opacity = "1";
+        btnBuy.style.cursor = "pointer";
+        
+        // Llamamos a updateUI para que decida si el botón de Venta debe estar activo (según si tiene acciones o no)
+        updateUIForUser(); 
     }
 }
 

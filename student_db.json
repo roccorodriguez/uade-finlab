@@ -1,8 +1,9 @@
 {
     "roccrodriguez": {
-        "balance": 80207.2,
+        "balance": 36249.2,
         "portfolio": {
-            "NVDA": 110
+            "NVDA": 110,
+            "TSLA": 100
         },
         "initial": 100000.0
     }
