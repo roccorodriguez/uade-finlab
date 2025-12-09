@@ -16,14 +16,13 @@ from email.mime.multipart import MIMEMultipart
 import random
 import string
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = FastAPI()
 
-DB_FILE = "student_db.json" 
-MARKET_CONFIG_FILE = "market_config.json"
-METADATA_FILE = "asset_metadata.json"
-
 MARKET_DATA_CACHE = {"data": {}, "timestamp": 0} 
-CACHE_DURATION_SECONDS = 5
+CACHE_DURATION_SECONDS = 10
 
 SYMBOL_EXCEPTIONS = {
     "BTC": "BTC-USD",
@@ -36,6 +35,103 @@ SENDER_EMAIL = "uadefinlab.bot@gmail.com"
 SENDER_PASSWORD = "abob xxsa zlay iisg"
 
 PENDING_CODES = {}
+
+class JsonBinHandler:
+    def __init__(self):
+        self.API_KEY = os.getenv("JSONBIN_API_KEY")
+        self.BASE_URL = "https://api.jsonbin.io/v3/b"
+        
+        # Mapeo de nombres internos a IDs del .env
+        self.BINS = {
+            "students": os.getenv("BIN_ID_STUDENTS"),
+            "config": os.getenv("BIN_ID_CONFIG"),     # Reemplaza a market_config.json
+            "metadata": os.getenv("BIN_ID_METADATA")  # Reemplaza a asset_metadata.json
+        }
+        
+        self.headers = {
+            "X-Master-Key": self.API_KEY,
+            "Content-Type": "application/json"
+        }
+        
+        # Cache en memoria para no saturar JSONBin con datos estáticos
+        self.local_cache = {
+            "config": None,
+            "metadata": None
+        }
+
+    def _read_bin(self, bin_type, use_cache=False):
+        # Si pedimos cache y ya lo tenemos, devolver memoria local
+        if use_cache and self.local_cache.get(bin_type):
+            return self.local_cache[bin_type]
+
+        bin_id = self.BINS.get(bin_type)
+        if not bin_id:
+            print(f"⚠️ Error: BIN ID para '{bin_type}' no configurado en .env")
+            return {} if bin_type == "metadata" else []
+
+        try:
+            url = f"{self.BASE_URL}/{bin_id}/latest"
+            # X-Bin-Meta: false es vital para obtener solo tu JSON limpio
+            headers = self.headers.copy()
+            headers["X-Bin-Meta"] = "false"
+            
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                # Actualizar cache local si corresponde
+                if use_cache:
+                    self.local_cache[bin_type] = data
+                return data
+            else:
+                print(f"❌ Error leyendo JSONBin ({bin_type}): {response.status_code}")
+                return {}
+        except Exception as e:
+            print(f"❌ Excepción conectando a JSONBin: {e}")
+            return {}
+
+    def _update_bin(self, bin_type, data):
+        bin_id = self.BINS.get(bin_type)
+        if not bin_id: return False
+        
+        url = f"{self.BASE_URL}/{bin_id}"
+        try:
+            # En JSONBin v3, PUT actualiza el contenido
+            response = requests.put(url, headers=self.headers, json=data)
+            
+            # Si actualizamos la nube, actualizamos también el cache local
+            if response.status_code == 200 and bin_type in self.local_cache:
+                self.local_cache[bin_type] = data
+                
+            return response.status_code == 200
+        except Exception as e:
+            print(f"❌ Error guardando en JSONBin: {e}")
+            return False
+
+    # --- MÉTODOS PÚBLICOS (Reemplazos directos) ---
+    def get_students(self):
+        # Los estudiantes NO se cachean (cambian con cada compra)
+        return self._read_bin("students", use_cache=False) or {}
+
+    def save_students(self, data):
+        self._update_bin("students", data)
+
+    def get_config(self):
+        # La lista de tickers SI se cachea (solo cambia al agregar activos)
+        data = self._read_bin("config", use_cache=True)
+        return data if isinstance(data, list) else []
+
+    def save_config(self, data):
+        self._update_bin("config", data)
+
+    def get_metadata(self):
+        # La metadata SI se cachea
+        return self._read_bin("metadata", use_cache=True) or {}
+
+    def save_metadata(self, data):
+        self._update_bin("metadata", data)
+
+# Instanciamos el gestor globalmente
+db_handler = JsonBinHandler()
 
 class AssetData(BaseModel):
     name: str
@@ -63,46 +159,34 @@ class StudentRanking(BaseModel):
 class AddAssetRequest(BaseModel):
     symbol: str
 
+# --- FUNCIONES DE PERSISTENCIA REESCRITAS ---
+
 def load_db():
-    if not os.path.exists(DB_FILE):
-        initial_db = {}
-        with open(DB_FILE, 'w') as f:
-            json.dump(initial_db, f)
-        return initial_db
-    
-    with open(DB_FILE, 'r') as f:
-        return json.load(f)
+    return db_handler.get_students()
 
 def save_db(db_data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(db_data, f, indent=4)
+    # Guardamos en la nube
+    db_handler.save_students(db_data)
 
 def load_market_config() -> List[str]:
-    if not os.path.exists(MARKET_CONFIG_FILE):
-        initial_symbols = ["GGAL", "YPF", "MELI", "BTC", "AAPL"]
-        with open(MARKET_CONFIG_FILE, 'w') as f:
-            json.dump(initial_symbols, f)
-        return initial_symbols
-
-    with open(MARKET_CONFIG_FILE, 'r') as f:
-        return json.load(f)
+    # Obtiene de cache o de la nube
+    config = db_handler.get_config()
+    # Fallback por si la nube está vacía
+    if not config:
+        return ["GGAL", "YPF", "MELI", "BTC", "AAPL"] 
+    return config
 
 def save_market_config(symbols: List[str]):
-    with open(MARKET_CONFIG_FILE, 'w') as f:
-        json.dump(symbols, f, indent=4)
+    db_handler.save_config(symbols)
+
+def load_metadata() -> Dict:
+    return db_handler.get_metadata()
+
+def save_metadata(data: Dict):
+    db_handler.save_metadata(data)
 
 def get_yahoo_ticker(symbol: str) -> str:
     return SYMBOL_EXCEPTIONS.get(symbol, symbol)
-
-def load_metadata() -> Dict:
-    if not os.path.exists(METADATA_FILE):
-        return {}
-    with open(METADATA_FILE, 'r') as f:
-        return json.load(f)
-
-def save_metadata(data: Dict):
-    with open(METADATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
 
 def fetch_yfinance_data(force_update: bool = False):
     global MARKET_DATA_CACHE
