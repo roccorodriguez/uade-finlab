@@ -321,8 +321,8 @@ function updateUIForUser() {
                 list.innerHTML += `
                     <div class="holding-item">
                         <div>
-                            <strong style="color:#fff">${symbol}</strong> 
-                            <span style="color:#aaa">(${qty})</span>
+                            <strong>${symbol}</strong> 
+                            <span style="color:var(--text-muted)">
                         </div>
                         <div>${formatMoney(totalVal)}</div>
                     </div>`;
@@ -449,7 +449,7 @@ function renderLeaderboard(students) {
         tbody.innerHTML += `
             <tr style="${rowBg}">
                 <td><div class="rank-badge ${rankClass}">${rankIcon}</div></td>
-                <td style="font-family:'JetBrains Mono'; color:#fff;">${s.usuario}</td>
+                <td style="font-family:'JetBrains Mono'; color: var(--text-main);">${s.usuario}</td>
                 <td style="text-align:right; font-family:'JetBrains Mono'">${formatMoney(s.total)}</td>
                 <td style="text-align:right" class="${roiClass}">${s.roi >=0 ? '+' : ''}${s.roi.toFixed(2)}%</td>
             </tr>
@@ -488,7 +488,7 @@ function renderAssetList() {
             <div class="asset-item ${activeClass}" onclick="loadAsset('${symbol}')">
                 
                 <div style="overflow: hidden;">
-                    <div class="asset-symbol" style="color: #fff;">${symbol}</div>
+                    <div class="asset-symbol">${symbol}</div>
                     <div class="asset-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || symbol}</div>
                 </div>
 
@@ -675,7 +675,7 @@ function renderChat(symbol) {
     
     if (!chatHistory[symbol]) {
         chatHistory[symbol] = [
-            { role: 'incoming', text: `Hola. Estoy analizando el gráfico de ${symbol}. ¿En qué te puedo ayudar?` }
+            { role: 'incoming', text: `Hola. Estoy analizando el gráfico de ${symbol}.\n¿En qué te puedo ayudar?` }
         ];
     }
 

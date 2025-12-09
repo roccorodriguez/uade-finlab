@@ -1,16 +1,20 @@
 :root {
-    --bg-dark: #000000;
-    --bg-panel: #161616; 
+    /* --- PALETA MODO CLARO (Institucional) --- */
+    --bg-dark: #f0f2f5;       /* Fondo general gris muy suave */
+    --bg-panel: #ffffff;      /* Paneles blancos puros */
     
-    --primary: #e0e0e0; 
-    --primary-dim: rgba(255, 255, 255, 0.05);
-    --accent: #2a2e39; 
-    --gold: #d4af37;
-    --success: #2ebd85; 
-    --danger: #f23645;  
-    --text-main: #ffffff;
-    --text-muted: #666666; 
-    --border: #262626;
+    --primary: #2d3436; 
+    --primary-dim: rgba(0, 0, 0, 0.05); /* Color de hover suave */
+    --accent: #e2e8f0; 
+    
+    --gold: #b78a06;          /* Oro más oscuro para que se lea en blanco */
+    --success: #008a5e;       /* Verde más oscuro para contraste */
+    --danger: #d93025;        /* Rojo estándar de finanzas */
+    
+    --text-main: #1f2937;     /* Gris muy oscuro (casi negro) */
+    --text-muted: #64748b;    /* Gris medio */
+    
+    --border: #e2e8f0;        /* Bordes sutiles */
     --glass: none; 
 }
 
@@ -26,57 +30,27 @@ body {
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-dark); }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 
-/* ================= TICKER TRADINGVIEW (Versión Definitiva) ================= */
-
+/* ================= TICKER TRADINGVIEW ================= */
 .tv-ticker-fixed {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    /* Altura ajustada: 42px es el punto dulce para escala 0.90 */
-    height: 42px; 
+    position: fixed; top: 0; left: 0; width: 100%; height: 42px; 
     z-index: 1000;
-    background-color: #000;
-    overflow: hidden; /* Recorta lo que sobre del widget original */
-    /* Sin border-bottom para evitar líneas dobles */
+    background-color: #ffffff; /* Fondo blanco */
+    border-bottom: 1px solid var(--border);
+    overflow: hidden; 
 }
-
-/* Ocultar copyright para limpiar espacio */
-.tradingview-widget-copyright {
-    display: none !important;
-}
-
+.tradingview-widget-copyright { display: none !important; }
 .tv-ticker-fixed .tradingview-widget-container {
-    position: absolute;
-    top: 0;
-    left: 50%; /* Paso 1: Mover al centro */
-    
-    /* Paso 2: Centrar matemáticamente y Escalar al 90% */
+    position: absolute; top: 0; left: 50%; 
     transform: translateX(-50%) scale(0.90); 
     transform-origin: top center;
-    
-    /* Paso 3: Ancho compensado */
-    /* 100vw dividido 0.90 da 111.11vw. Usamos 112vw para seguridad */
-    width: 112vw !important; 
-    height: 100% !important;
+    width: 112vw !important; height: 100% !important;
 }
 
-/* Ajuste del margen del contenido principal */
+/* ================= LAYOUT PRINCIPAL ================= */
 .container {
-    max-width: 1600px; 
-    /* 42px de barra + 20px de aire = 62px */
-    margin: 62px auto 0; 
-    padding: 0 20px;
-    display: flex; flex-direction: column;
-}
-
-.positive { color: var(--success); }
-.negative { color: var(--danger); }
-
-.container {
-    max-width: 1600px; margin: 60px auto 0; padding: 0 20px;
+    max-width: 1600px; margin: 62px auto 0; padding: 0 20px;
     display: flex; flex-direction: column;
 }
 
@@ -86,483 +60,491 @@ header {
 }
 .brand h1 {
     font-size: 28px; font-weight: 700; letter-spacing: -1px;
-    color: #fff;
+    color: var(--text-main); /* Antes blanco */
 }
 .brand span { color: var(--text-muted); font-weight: 300;} 
 
 .market-status { display: flex; gap: 20px; }
 .status-pill {
-    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    background: #ffffff; border: 1px solid var(--border);
     padding: 8px 16px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .status-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
 
-/* ================= NAVEGACIÓN INFERIOR (Sin Bordes) ================= */
-
+/* ================= NAVEGACIÓN ================= */
 .nav-tabs { 
-    display: flex; 
-    gap: 15px; 
-    
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    
-    height: 90px; 
-    padding-bottom: 20px; 
-    
-    justify-content: center; 
-    align-items: center; 
-    
-    background-color: var(--bg-dark); 
-    
-    /* CAMBIO AQUÍ: Quitamos la línea de arriba */
-    border-top: none; 
-    
-    z-index: 1000;
-    margin: 0;
-    box-sizing: border-box;
+    display: flex; gap: 15px; position: fixed; bottom: 0; left: 0; width: 100%;
+    height: 90px; padding-bottom: 20px; justify-content: center; align-items: center; 
+    background-color: var(--bg-dark); /* Fondo gris claro */
+    border-top: none; z-index: 1000; margin: 0; box-sizing: border-box;
 }
 
 .nav-tab {
-    /* TAMAÑO MÁS GRANDE */
-    padding: 14px 30px; 
-    font-size: 16px; /* Letra más grande */
-    font-weight: 600;
-    
-    background: transparent; 
-    border: 1px solid transparent;
+    padding: 14px 30px; font-size: 16px; font-weight: 600;
+    background: #ffffff; /* Botones blancos */
+    border: 1px solid var(--border);
     color: var(--text-muted); 
-    border-radius: 6px; 
-    transition: all 0.2s;
-    
-    /* CURSOR Y SELECCIÓN (Arreglo del texto) */
-    cursor: pointer; /* Fuerza la manito */
-    user-select: none; /* Prohíbe seleccionar el texto */
-    -webkit-user-select: none; /* Para Safari/Chrome */
+    border-radius: 6px; transition: all 0.2s;
+    cursor: pointer; user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.nav-tab:hover { 
-    background: var(--bg-panel); 
-    color: #fff; 
-}
-
+.nav-tab:hover { background: #f8fafc; color: var(--text-main); }
 .nav-tab.active {
-    background: var(--bg-panel); 
-    border: 1px solid var(--border); 
-    color: #fff;
-    box-shadow: none; 
+    background-color: #131722 !important; /* El color exacto de fondo de TradingView */
+    border: 1px solid #131722 !important;
+    color: #ffffff !important;            /* Texto blanco */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); /* Sombra para darle profundidad */
 }
 
+/* ================= SECCIONES Y TARJETAS ================= */
 .section { display: none; padding-bottom: 20px; animation: fadeUp 0.4s ease; }
 .section.active { display: block; }
-
-/* EN styles.css */
-
-#markets, .competition-grid, .analysis-grid {
-    /* Ajustamos para la nueva barra más alta: 100vh - 270px */
-    height: calc(100vh - 270px);
-    margin-bottom: 10px;
-}
+#markets, .competition-grid, .analysis-grid { height: calc(100vh - 270px); margin-bottom: 10px; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .card {
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px;
-    padding: 20px; box-shadow: none; 
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 20px; 
     display: flex; flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Sombra suave */
 }
 
-#markets .card {
-    height: 100%;
-    padding: 0;
-    border: none;
-    background: transparent; 
-    overflow: hidden;
-}
+#markets .card { height: 100%; padding: 0; border: none; background: transparent; overflow: hidden; box-shadow: none; }
 
-.tradingview-widget-container,
-.tradingview-widget-container__widget,
-.tradingview-widget-container iframe {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-    background-color: #000000;
-}
-
-.competition-grid {
-    display: grid; grid-template-columns: 320px 1fr 340px; gap: 20px;
-}
+.competition-grid { display: grid; grid-template-columns: 320px 1fr 340px; gap: 20px; }
 #explorer .competition-grid .card:first-child { height: 100%; }
+.analysis-grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
 
-.analysis-grid {
-    display: grid; grid-template-columns: 1fr 400px; gap: 20px;
+/* ================= INPUTS Y BÚSQUEDA ================= */
+.search-container { display: flex; gap: 8px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+.search-container input {
+    background: #f8fafc; /* Gris muy claro */
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px 12px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    flex-grow: 1; text-transform: uppercase; outline: none; transition: border 0.2s;
+}
+.search-container input:focus { border-color: var(--text-muted); background: #fff; }
+
+.search-container button {
+    background: #f1f5f9; border: 1px solid var(--border); color: var(--success);
+    width: 35px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.2s;
+}
+.search-container button:hover { background: var(--success); color: #fff; }
+
+/* ================= LISTA DE ACTIVOS ================= */
+.asset-list { flex-basis: 0; flex-grow: 1; overflow-y: auto; margin-top: 10px; }
+
+.asset-item {
+    display: grid; grid-template-columns: 1fr 20px auto auto; gap: 10px;
+    align-items: center; padding: 12px 12px;
+    border-bottom: 1px solid var(--border); border-left: 3px solid transparent;
+    transition: all 0.2s ease; background: transparent; cursor: pointer;
+}
+.asset-item:hover { background: #f8fafc; }
+.asset-item.active { background: #edf2f7; border-left-color: var(--gold); }
+
+.asset-symbol { font-weight: 700; font-size: 13px; color: var(--text-main); }
+.asset-name { font-size: 10px; color: var(--text-muted); }
+.asset-price-mini { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; text-align: right; color: var(--text-main); }
+.asset-change-mini { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px; text-align: right; min-width: 55px; }
+
+.asset-price-mini.positive, .asset-change-mini.positive, .positive { color: var(--success); }
+.asset-price-mini.negative, .asset-change-mini.negative, .negative { color: var(--danger); }
+
+.btn-remove {
+    width: 20px; height: 20px; background: transparent; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease; color: #94a3b8; 
+}
+.asset-item.active .btn-remove { opacity: 1; pointer-events: auto; }
+.btn-remove:hover { color: var(--danger); }
+
+/* ================= FEED Y RANKING ================= */
+.col-center { display: flex; flex-direction: column; gap: 20px; height: 100%; }
+.leaderboard-container { height: 60%; overflow: hidden; display: flex; flex-direction: column; }
+.live-feed-container { height: 40%; display: flex; flex-direction: column; border: 1px solid var(--border); background: var(--bg-panel); }
+
+.feed-list { flex-grow: 1; overflow-y: hidden; position: relative; }
+.feed-wrapper { position: absolute; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; gap: 4px; padding: 10px; }
+.feed-item {
+    font-size: 12px; padding: 8px 12px; border-radius: 4px;
+    background: #f8fafc; /* Fondo claro */
+    display: flex; justify-content: space-between; border-left: 3px solid #555; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    animation: slideIn 0.3s ease-out;
+}
+.feed-buy { border-left-color: var(--success); }
+.feed-sell { border-left-color: var(--danger); }
+
+.leaderboard-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.leaderboard-table th { text-align: left; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+.leaderboard-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text-main); }
+
+.rank-badge { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: bold; font-size: 11px; color: #fff; }
+.rank-1 { background: var(--gold); }
+.rank-2 { background: #94a3b8; }
+.rank-3 { background: #b45309; }
+.rank-other { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ================= LOGIN Y PANELES LATERALES ================= */
+.login-panel { 
+    text-align: center; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    height: 100%; 
+    gap: 15px; 
 }
 
-.search-container {
+/* --- ESTO ES LO QUE FALTABA --- */
+/* Por defecto ocultamos la interfaz de trading */
+.trade-interface { 
+    display: none; 
+    flex-direction: column; 
+    height: 100%; 
+}
+
+/* Solo se muestra cuando Javascript le agrega la clase .active */
+.trade-interface.active { 
+    display: flex; 
+}
+/* ------------------------------- */
+
+.login-input { 
+    background: #f8fafc; border: 1px solid var(--border); padding: 15px; 
+    border-radius: 6px; color: var(--text-main); font-family: 'JetBrains Mono'; 
+    text-align: center; font-size: 18px; width: 100%; margin-bottom: 10px;
+}
+/* Botón de Login (Color TradingView + Ancho Completo) */
+.login-btn {
+    /* PROPIEDADES DE TAMAÑO (Lo que faltaba) */
+    width: 100%;           /* Ocupa todo el ancho */
+    padding: 15px;         /* Relleno generoso */
+    border-radius: 6px;    /* Bordes redondeados */
+    font-weight: bold; 
+    text-transform: uppercase; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+
+    /* PROPIEDADES DE COLOR (El gris oscuro que te gustó) */
+    background-color: #131722 !important; 
+    color: #ffffff !important;
+    border: 1px solid #2a2e39 !important;
+}
+
+/* Efecto al pasar el mouse */
+.login-btn:hover {
+    background-color: #2a2e39 !important;
+    border-color: #404652 !important;
+    transform: translateY(-1px);
+}
+
+.student-badge {
+    background: #ffffff; /* Corregido a blanco puro para mejor contraste */
+    padding: 15px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center; 
+    margin-bottom: 20px; border: 1px solid var(--border);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra suave agregada */
+}
+.student-info h4 { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 8px; }
+.student-info h2 { font-family: 'JetBrains Mono'; font-size: 20px; color: var(--text-main); margin-bottom: 2px; }
+
+.logout-btn { 
+    background: #fff; border: 1px solid var(--danger); color: var(--danger);
+    padding: 8px 18px; border-radius: 6px; font-family: 'JetBrains Mono'; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.logout-btn:hover { background: var(--danger); color: #fff; }
+
+/* ... dentro de LOGIN Y PANELES LATERALES ... */
+
+.order-form { 
+    background: #f8fafc; 
+    padding: 20px; 
+    border-radius: 8px; 
+    border: 1px solid var(--border); 
+    margin-bottom: 20px; 
+}
+
+/* 1. ARREGLO DE TEXTO: Forzamos el color oscuro */
+.order-form h4, 
+#orderAsset {
+    color: var(--text-main) !important; /* El !important es clave para pisar el blanco */
+    margin-bottom: 15px;
+}
+
+.input-group {
+    margin-bottom: 15px; /* Separación entre precio y cantidad */
+}
+
+.input-group label { 
+    display: block; 
+    font-size: 10px; 
+    color: var(--text-muted); 
+    margin-bottom: 5px; 
+    text-transform: uppercase; 
+}
+
+.qty-input { 
+    width: 100%; 
+    background: #fff; 
+    border: 1px solid var(--border); 
+    color: var(--text-main); 
+    padding: 10px; 
+    border-radius: 4px; 
+    font-family: 'JetBrains Mono'; 
+}
+
+/* 2. ARREGLO DE BOTONES: Agregamos contenedor flex y margen */
+.action-btns {
     display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
+    gap: 10px;        /* Espacio lateral entre botones */
+    margin-top: 20px; /* Espacio superior para separarlos de la cantidad */
+}
+
+.btn-trade { 
+    flex: 1;          /* Para que ambos botones tengan el mismo ancho */
+    padding: 12px; 
+    border: none; 
+    border-radius: 4px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    color: #fff; 
+    text-transform: uppercase; 
+    font-size: 12px; 
+    transition: opacity 0.2s;
+}
+
+.btn-buy { background: var(--success); }
+.btn-sell { background: var(--danger); }
+
+.holdings-list { flex-grow: 1; overflow-y: auto; }
+.holding-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-main); }
+
+/* ================= CHAT AI (Estilo Restaurado & Modo Claro) ================= */
+
+/* Contenedor Principal: Se asegura de llenar la tarjeta padre */
+.embedded-chat-container { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100%;       
+    width: 100%; 
+    background: #ffffff; 
+    /* No ponemos bordes aquí para que use los de la tarjeta padre */
+}
+
+/* --- HEADER (Ajustado a la izquierda) --- */
+.chat-header { 
+    flex-shrink: 0; 
+    background: #ffffff; 
+    
+    /* CAMBIO AQUÍ: Reduje el padding lateral de 25px a 15px */
+    padding: 20px 15px; 
+    
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; 
     border-bottom: 1px solid var(--border);
 }
 
-.search-container input {
-    background: #0a0a0a;
-    border: 1px solid var(--border);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    flex-grow: 1;
-    text-transform: uppercase;
+.chat-header div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* AQUÍ ESTÁ EL CAMBIO DE TAMAÑO */
+.chat-header h2 { 
+    color: var(--text-main); 
+    font-size: 22px;   /* Mucho más grande, como pediste */
+    font-weight: 800;  /* Más grueso (Bold) */
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.chat-header p { 
+    color: var(--text-muted) !important; 
+    font-size: 11px; 
+    margin: 0; 
+    font-weight: 500;
+}
+
+/* Ícono de burbuja a la derecha */
+.chat-header div:last-child {
+    font-size: 20px;
+    opacity: 0.5;
+    margin-top: 5px;
+}
+
+/* --- ÁREA DE MENSAJES --- */
+.chatbox { 
+    flex-grow: 1;   /* Ocupa todo el espacio disponible */
+    overflow-y: auto; 
+    padding: 20px; 
+    background: #f8fafc; /* Fondo gris muy suave */
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    list-style: none; 
+}
+
+/* Estructura del Mensaje */
+.chat { 
+    display: flex; 
+    gap: 12px; 
+    align-items: flex-start; /* Alineación superior para el ícono */
+}
+
+/* Estructura del texto de la burbuja */
+.chat p { 
+    padding: 12px 16px; 
+    border-radius: 8px; 
+    max-width: 92%; 
+    font-size: 13px; 
+    line-height: 1.5; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    margin: 0;
+    
+    /* AGREGAR ESTO: Permite saltos de línea con \n */
+    white-space: pre-line; 
+}
+
+/* Mensaje del Robot (Izquierda) */
+.incoming { 
+    justify-content: flex-start; 
+}
+
+/* El ícono del robot (Versión más chica) */
+.incoming span { 
+    width: 28px;       /* Reducido de 35px a 28px */
+    height: 28px;      /* Reducido de 35px a 28px */
+    background: #e2e8f0; 
+    color: var(--text-main);
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    border-radius: 6px; 
+    font-size: 15px;   /* Reducido de 20px a 15px */
+    flex-shrink: 0; 
+}
+
+.incoming p { 
+    background: #ffffff; 
+    color: var(--text-main); 
+    border: 1px solid var(--border); 
+    border-top-left-radius: 0; /* Efecto visual de origen */
+}
+
+/* Mensaje del Usuario (Derecha) */
+.outgoing { 
+    justify-content: flex-end; 
+}
+
+.outgoing p { 
+    background: var(--text-main); /* Gris oscuro institucional */
+    color: #ffffff; 
+    border-bottom-right-radius: 0; 
+}
+
+/* --- INPUT (Fijo abajo) --- */
+.chat-input { 
+    flex-shrink: 0; 
+    display: flex; 
+    gap: 10px; 
+    padding: 15px 20px; /* Más padding lateral */
+    background: #ffffff; 
+    border-top: 1px solid var(--border); 
+    align-items: center; 
+}
+
+.chat-input textarea { 
+    width: 100%; 
+    background: #f8fafc; /* Input gris claro */
+    border: 1px solid var(--border); 
+    color: var(--text-main); 
+    padding: 12px 15px; 
+    border-radius: 6px; 
+    resize: none; 
+    height: 45px; 
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
     outline: none;
     transition: border 0.2s;
 }
 
-.search-container input:focus {
-    border-color: var(--text-muted);
+.chat-input textarea:focus { 
+    background: #ffffff; 
+    border-color: var(--text-muted); 
 }
 
-.search-container button {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
+.chat-input span { 
+    color: var(--text-main); 
+    cursor: pointer; 
+    font-size: 20px; 
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.chat-input span:hover {
+    transform: translateX(3px);
     color: var(--success);
-    width: 35px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 16px;
-    transition: all 0.2s;
 }
 
-.search-container button:hover {
-    background: var(--success);
-    color: #000;
-}
-
-.asset-list { 
-    flex-basis: 0; 
-    flex-grow: 1;
-    overflow-y: auto; 
-    margin-top: 10px;
-}
-
-.asset-item {
-    display: grid; 
-    /* Col 1: Info | Col 2: Tacho | Col 3: Precio | Col 4: Cambio */
-    grid-template-columns: 1fr 20px auto auto; 
-    gap: 10px; /* Un poco más de aire */
-    align-items: center;
-    padding: 12px 12px;
-    border-bottom: 1px solid var(--border);
-    border-left: 3px solid transparent;
-    transition: all 0.2s ease;
-    background: transparent;
-    cursor: pointer;
-}
-
-.asset-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.asset-item.active {
-    background: rgba(255, 255, 255, 0.05);
-    border-left-color: var(--gold);
-}
-
-.asset-symbol { font-weight: 700; font-size: 13px; color: #fff; }
-.asset-name { font-size: 10px; color: var(--text-muted); }
-
-.asset-price-mini { 
-    font-family: 'JetBrains Mono', monospace; 
-    font-weight: 700; 
-    font-size: 13px; 
-    text-align: right;
-    color: #fff; /* SIEMPRE BLANCO */
-}
-
-.asset-change-mini {
-    font-family: 'JetBrains Mono', monospace; 
-    font-weight: 700; 
-    font-size: 11px; 
-    text-align: right;
-    min-width: 55px; /* Para que alineen bien */
-}
-
-.asset-price-mini.positive { color: var(--success); }
-.asset-price-mini.negative { color: var(--danger); }
-
-.asset-change-mini.positive { color: var(--success); }
-.asset-change-mini.negative { color: var(--danger); }
-
-.btn-remove {
-    width: 20px; height: 20px;
-    background: transparent; border: none;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    padding: 0;
-    
-    opacity: 0;
-    pointer-events: none; 
-    transition: opacity 0.2s ease;
-    color: #555; 
-}
-
-.asset-item.active .btn-remove {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.btn-remove:hover {
-    color: var(--danger); 
-}
-
-.btn-remove svg {
-    width: 14px; height: 14px;
-    stroke-width: 2;
-}
-
-.col-center { display: flex; flex-direction: column; gap: 20px; height: 100%; }
-
-.leaderboard-container { 
-    height: 60%; overflow: hidden; display: flex; flex-direction: column;
-}
-
-.live-feed-container {
-    height: 40%; display: flex; flex-direction: column;
-    border: 1px solid var(--border); background: var(--bg-panel);
-}
-.feed-list {
-    flex-grow: 1; overflow-y: hidden; position: relative;
-}
-.feed-wrapper {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    display: flex; flex-direction: column; gap: 4px; padding: 10px;
-}
-.feed-item {
-    font-size: 12px; padding: 8px 12px; border-radius: 2px;
-    background: rgba(255,255,255,0.02); display: flex; justify-content: space-between;
-    border-left: 2px solid #555; animation: slideIn 0.3s ease-out;
-}
-.feed-buy { border-left-color: var(--success); }
-.feed-sell { border-left-color: var(--danger); }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-
-.leaderboard-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.leaderboard-table th { 
-    text-align: left; color: var(--text-muted); padding: 8px 12px; 
-    border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase;
-}
-.leaderboard-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle;}
-.rank-badge { 
-    width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; 
-    border-radius: 2px; font-weight: bold; font-size: 11px; color: #000;
-}
-.rank-1 { background: var(--gold); }
-.rank-2 { background: #c0c0c0; }
-.rank-3 { background: #cd7f32; }
-.rank-other { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
-
-.roi-positive { color: var(--success); font-weight: bold; font-family: 'JetBrains Mono'; }
-.roi-negative { color: var(--danger); font-weight: bold; font-family: 'JetBrains Mono'; }
-
-.login-panel { text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100%; gap: 15px; }
-.login-input { 
-    background: #000; border: 1px solid var(--border); padding: 15px; 
-    border-radius: 4px; color: #fff; font-family: 'JetBrains Mono'; 
-    text-align: center; font-size: 18px; width: 100%; margin-bottom: 10px;
-}
-.login-btn {
-    background: #fff; color: #000; border: none; padding: 15px;
-    border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-    transition: 0.3s; width: 100%;
-}
-.login-btn:hover { background: #ccc; box-shadow: none; }
-
-.trade-interface { display: none; flex-direction: column; height: 100%; }
-.trade-interface.active { display: flex; }
-
-/* Busca y reemplaza este bloque en tu styles.css */
-
-.student-badge {
-    background: #000; 
-    padding: 15px; 
-    border-radius: 4px;
-    
-    /* ESTAS 3 LÍNEAS SON CLAVE PARA QUE EL BOTÓN ESTÉ A LA DERECHA */
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    
-    margin-bottom: 20px;
-    border: 1px solid var(--border);
-}
-
-.student-info h4 { 
-    font-size: 11px; 
-    color: var(--text-muted); 
-    
-    /* Eliminé text-transform: uppercase para que respete minúsculas */
-    letter-spacing: 1px;
-    margin-bottom: 8px; 
-}
-
-.student-info h2 { 
-    font-family: 'JetBrains Mono'; 
-    font-size: 20px; /* Un pelín más grande */
-    color: #fff; 
-    margin-bottom: 2px;
-}
-
-/* CAMBIO 3: Botón de Logout Rediseñado */
-.logout-btn { 
-    background: transparent; /* Fondo limpio */
-    border: 1px solid var(--danger); 
-    color: var(--danger);
-    
-    padding: 8px 18px; /* Más ancho para que respire */
-    border-radius: 6px; /* Bordes más suaves */
-    
-    font-family: 'JetBrains Mono', monospace; /* Fuente técnica */
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-}
-
-.logout-btn:hover { 
-    background: var(--danger); 
-    color: #fff; 
-    box-shadow: 0 4px 15px rgba(242, 54, 69, 0.4); /* Efecto de luz roja (Glow) */
-    transform: translateY(-1px); /* Pequeña elevación */
-}
-
-.logout-btn:active {
-    transform: translateY(0);
-    box-shadow: none;
-}
-
-.order-form { background: #0a0a0a; padding: 20px; border-radius: 4px; border: 1px solid var(--border); margin-bottom: 20px; }
-.input-group { margin-bottom: 15px; }
-.input-group label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
-.qty-input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 4px; font-family: 'JetBrains Mono'; }
-
-.action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.btn-trade { padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: #fff; text-transform: uppercase; font-size: 12px; }
-.btn-buy { background: var(--success); color: #fff; }
-.btn-buy:hover { opacity: 0.9; }
-.btn-sell { background: var(--danger); color: #fff; }
-.btn-sell:hover { opacity: 0.9; }
-
-.holdings-list { flex-grow: 1; overflow-y: auto; }
-.holding-item { 
-    display: flex; justify-content: space-between; padding: 10px; 
-    border-bottom: 1px solid var(--border); font-size: 12px; 
-}
-
+/* --- GRÁFICO (Chart) --- */
+/* Mantenemos el estilo del gráfico que estaba en esta sección */
 .chart-wrapper {
-    background: var(--bg-panel); border: 1px solid var(--border);
-    border-radius: 4px; padding: 0; height: 60%; position: relative; margin-bottom: 20px; overflow: hidden;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 8px; padding: 0; height: 60%; position: relative; margin-bottom: 20px; overflow: hidden;
 }
-.analysis-details {
-    height: 38%; display: flex; flex-direction: column; justify-content: space-between;
-}
+.analysis-details { height: 38%; display: flex; flex-direction: column; justify-content: space-between; }
 .analysis-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .analysis-label { color: var(--text-muted); font-size: 12px; }
-.analysis-val { font-family: 'JetBrains Mono'; font-weight: bold; }
+.analysis-val { font-family: 'JetBrains Mono'; font-weight: bold; color: var(--text-main); }
 
-.embedded-chat-container { display: flex; flex-direction: column; height: 100%; background: var(--bg-panel); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
-.chat-header { background: #0a0a0a; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-.chatbox { flex-grow: 1; overflow-y: auto; padding: 20px; background: #000; display: flex; flex-direction: column; gap: 15px; list-style: none; }
-.chat { display: flex; }
-.outgoing { justify-content: flex-end; }
-.incoming { justify-content: flex-start; }
-.incoming span { width: 28px; height: 28px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
-.chat p { padding: 10px 14px; border-radius: 4px; max-width: 85%; font-size: 13px; line-height: 1.4; color: #fff; }
-.outgoing p { background: #333; color: #fff; border-radius: 4px; }
-.incoming p { background: #111; border: 1px solid #333; border-radius: 4px; color: #ccc; }
-.chat-input { display: flex; gap: 10px; padding: 15px; background: #0a0a0a; border-top: 1px solid var(--border); }
-.chat-input textarea { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 4px; resize: none; height: 40px; }
-.chat-input span { align-self: center; color: #fff; cursor: pointer; font-size: 20px; }
-
-.custom-select {
-    background: #000; color: #fff; border: 1px solid var(--border); padding: 8px;
-    border-radius: 4px; width: 250px; cursor: pointer; outline: none;
+/* Botón TV */
+.btn-tv {
+    display: flex; justify-content: center; align-items: center; width: 100%; padding: 10px;
+    background-color: #f1f5f9; border: 1px solid var(--border); color: var(--text-main);
+    border-radius: 4px; text-decoration: none; font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 11px; text-transform: uppercase; transition: all 0.1s ease;
 }
+.btn-tv:hover { background-color: #e2e8f0; }
 
+/* TOAST */
 #toast {
-    visibility: hidden; min-width: 250px; background-color: #fff; color: #000; text-align: center;
+    visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
     border-radius: 4px; padding: 16px; position: fixed; z-index: 2000; bottom: 30px; left: 50%; 
-    transform: translateX(-50%); font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-weight: bold;
+    transform: translateX(-50%); font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-weight: bold;
 }
-#toast.show { 
-    visibility: visible; 
-    /* Agregué 'forwards' al final para que se congele al terminar */
-    animation: fadein 0.5s, fadeout 0.5s 2.5s forwards; 
-}
+#toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s forwards; }
 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-/* Botón TradingView (Estilo Permanente) */
-.btn-tv {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding: 10px;
-    
-    /* Estilo fijo (Lo que antes era el hover) */
-    background-color: rgba(255, 255, 255, 0.05); 
-    border: 1px solid #444; /* Borde visible */
-    color: #fff; /* Texto blanco siempre */
-    
-    border-radius: 4px;
-    text-decoration: none;
-    
-    /* Tipografía técnica */
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 400;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    
-    transition: all 0.1s ease;
+/* ================= ESTADO DEL MERCADO (ROJO/VERDE) ================= */
+
+/* 1. Estado por defecto (ABIERTO) -> Verde */
+#marketStatusPill {
+    border: 1px solid var(--success);  /* Borde Verde */
+    color: var(--success);             /* Texto Verde */
+    background-color: #f0fdf4;         /* Fondo verde muy suave (opcional, queda elegante) */
+    font-weight: 700;
+    transition: all 0.3s ease;
 }
 
-/* Feedback táctil: Se ilumina un poco más al tocar */
-.btn-tv:active {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: #fff;
-    transform: translateY(1px); /* Efecto de botón presionado */
-}
-
-/* Estado Cerrado (Rojo) */
-.status-closed {
+/* 2. Estado CERRADO -> Rojo (Se activa cuando JS agrega la clase .status-closed) */
+#marketStatusPill.status-closed {
     border-color: var(--danger) !important;
     color: var(--danger) !important;
+    background-color: #fef2f2 !important; /* Fondo rojo muy suave */
 }
 
-.status-closed .status-dot {
-    background-color: var(--danger);
-    box-shadow: none;
-    animation: none; /* Deja de parpadear */
-}
-
-/* Animación de "Vivo" para el estado Abierto (Verde) */
-@keyframes pulseLive {
-    0% { opacity: 1; box-shadow: 0 0 0 0 rgba(46, 189, 133, 0.7); }
-    70% { opacity: 1; box-shadow: 0 0 0 4px rgba(46, 189, 133, 0); }
-    100% { opacity: 1; box-shadow: 0 0 0 0 rgba(46, 189, 133, 0); }
-}
-
-.status-dot {
-    /* Aseguramos que tenga la animación por defecto */
-    animation: pulseLive 2s infinite;
+/* 3. El puntito también cambia de color */
+#marketStatusPill.status-closed .status-dot {
+    background-color: var(--danger) !important;
 }
