@@ -29,11 +29,6 @@ SYMBOL_EXCEPTIONS = {
     "ETH": "ETH-USD"
 }
 
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
-SENDER_EMAIL = "uadefinlab.bot@gmail.com"
-SENDER_PASSWORD = "abob xxsa zlay iisg"
-
 PENDING_CODES = {}
 
 class JsonBinHandler:
@@ -382,22 +377,19 @@ def execute_trade(req: TradeRequest):
     elif req.type == 'sell':
         current_qty = user_data['portfolio'].get(req.asset, 0)
         
-        # --- CORRECCIÓN: VALIDACIÓN ESTRICTA ---
-        # Si la cantidad solicitada es MAYOR a la tenencia, cortamos acá.
+        # Validación estricta
         if req.quantity > current_qty:
             raise HTTPException(status_code=400, detail=f"Operación rechazada: Solo tienes {current_qty} acciones de {req.asset}.")
             
+        # --- LÓGICA DE VENTA (Solo una vez) ---
         user_data['balance'] += total_cost
         user_data['portfolio'][req.asset] -= req.quantity
         
-        # Limpieza de residuos (decimales muy chicos)
+        # Limpieza de residuos
         if user_data['portfolio'][req.asset] < 0.001:
              user_data['portfolio'].pop(req.asset)
-            
-        user_data['balance'] += total_cost
-        user_data['portfolio'][req.asset] -= req.quantity
-        if user_data['portfolio'][req.asset] < 0.001:
-             user_data['portfolio'].pop(req.asset)
+             
+        # ¡AQUÍ TERMINA EL ELIF! (Borra todo lo que había duplicado abajo)
 
     db[req.usuario] = user_data
     save_db(db)
