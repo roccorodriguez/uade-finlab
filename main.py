@@ -15,6 +15,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
 import string
+import pymongo
+import certifi
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -31,102 +33,86 @@ SYMBOL_EXCEPTIONS = {
 
 PENDING_CODES = {}
 
-class JsonBinHandler:
+class MongoHandler:
     def __init__(self):
-        self.API_KEY = os.getenv("JSONBIN_API_KEY")
-        self.BASE_URL = "https://api.jsonbin.io/v3/b"
+        self.MONGO_URI = os.getenv("MONGO_URI")
+        if not self.MONGO_URI:
+            raise RuntimeError("❌ ERROR: Falta MONGO_URI en .env")
+
+        # Conexión al Cluster
+        # tlsCAFile=certifi.where() es vital para evitar errores SSL en Windows/Mac
+        self.client = pymongo.MongoClient(self.MONGO_URI, tlsCAFile=certifi.where())
         
-        # Mapeo de nombres internos a IDs del .env
-        self.BINS = {
-            "students": os.getenv("BIN_ID_STUDENTS"),
-            "config": os.getenv("BIN_ID_CONFIG"),     # Reemplaza a market_config.json
-            "metadata": os.getenv("BIN_ID_METADATA")  # Reemplaza a asset_metadata.json
-        }
+        # Base de Datos (se creará sola si no existe)
+        self.db = self.client["finlab_db"]
         
-        self.headers = {
-            "X-Master-Key": self.API_KEY,
-            "Content-Type": "application/json"
-        }
-        
-        # Cache en memoria para no saturar JSONBin con datos estáticos
-        self.local_cache = {
-            "config": None,
-            "metadata": None
-        }
+        # Colecciones (Equivalente a las tablas o archivos JSON)
+        self.col_students = self.db["students"]
+        self.col_config = self.db["config"]
+        self.col_metadata = self.db["metadata"]
 
-    def _read_bin(self, bin_type, use_cache=False):
-        # Si pedimos cache y ya lo tenemos, devolver memoria local
-        if use_cache and self.local_cache.get(bin_type):
-            return self.local_cache[bin_type]
+        print("✅ Conectado exitosamente a MongoDB Atlas")
 
-        bin_id = self.BINS.get(bin_type)
-        if not bin_id:
-            print(f"⚠️ Error: BIN ID para '{bin_type}' no configurado en .env")
-            return {} if bin_type == "metadata" else []
-
-        try:
-            url = f"{self.BASE_URL}/{bin_id}/latest"
-            # X-Bin-Meta: false es vital para obtener solo tu JSON limpio
-            headers = self.headers.copy()
-            headers["X-Bin-Meta"] = "false"
-            
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                # Actualizar cache local si corresponde
-                if use_cache:
-                    self.local_cache[bin_type] = data
-                return data
-            else:
-                print(f"❌ Error leyendo JSONBin ({bin_type}): {response.status_code}")
-                return {}
-        except Exception as e:
-            print(f"❌ Excepción conectando a JSONBin: {e}")
-            return {}
-
-    def _update_bin(self, bin_type, data):
-        bin_id = self.BINS.get(bin_type)
-        if not bin_id: return False
-        
-        url = f"{self.BASE_URL}/{bin_id}"
-        try:
-            # En JSONBin v3, PUT actualiza el contenido
-            response = requests.put(url, headers=self.headers, json=data)
-            
-            # Si actualizamos la nube, actualizamos también el cache local
-            if response.status_code == 200 and bin_type in self.local_cache:
-                self.local_cache[bin_type] = data
-                
-            return response.status_code == 200
-        except Exception as e:
-            print(f"❌ Error guardando en JSONBin: {e}")
-            return False
-
-    # --- MÉTODOS PÚBLICOS (Reemplazos directos) ---
+    # --- ESTUDIANTES ---
     def get_students(self):
-        # Los estudiantes NO se cachean (cambian con cada compra)
-        return self._read_bin("students", use_cache=False) or {}
+        # Descarga todos los estudiantes y los convierte al formato Dict {usuario: data}
+        # para que tu código actual siga funcionando igual.
+        students = {}
+        cursor = self.col_students.find({})
+        for doc in cursor:
+            uid = doc["_id"] # En Mongo usamos el _id como el nombre de usuario
+            data = doc.copy()
+            del data["_id"] # Lo quitamos para no ensuciar tu lógica
+            students[uid] = data
+        return students
 
-    def save_students(self, data):
-        self._update_bin("students", data)
+    def save_students(self, data_dict):
+        # Esta función recibe TOOOODO el diccionario de estudiantes.
+        # En una app real, guardaríamos solo el usuario modificado, 
+        # pero para mantener tu código simple, actualizamos uno por uno (Upsert).
+        
+        for uid, user_data in data_dict.items():
+            # update_one con upsert=True: Si existe lo actualiza, si no, lo crea.
+            self.col_students.update_one(
+                {"_id": uid}, 
+                {"$set": user_data}, 
+                upsert=True
+            )
 
+    # --- CONFIGURACIÓN (Lista de activos visibles) ---
     def get_config(self):
-        # La lista de tickers SI se cachea (solo cambia al agregar activos)
-        data = self._read_bin("config", use_cache=True)
-        return data if isinstance(data, list) else []
+        # Guardamos la config en un documento con _id="market_config"
+        doc = self.col_config.find_one({"_id": "market_config"})
+        return doc["symbols"] if doc else ["GGAL", "YPF", "MELI", "BTC", "AAPL"]
 
-    def save_config(self, data):
-        self._update_bin("config", data)
+    def save_config(self, symbols_list):
+        self.col_config.update_one(
+            {"_id": "market_config"},
+            {"$set": {"symbols": symbols_list}},
+            upsert=True
+        )
 
+    # --- METADATA (Sectores, volatilidad) ---
     def get_metadata(self):
-        # La metadata SI se cachea
-        return self._read_bin("metadata", use_cache=True) or {}
+        meta = {}
+        cursor = self.col_metadata.find({})
+        for doc in cursor:
+            symbol = doc["_id"]
+            data = doc.copy()
+            del data["_id"]
+            meta[symbol] = data
+        return meta
 
-    def save_metadata(self, data):
-        self._update_bin("metadata", data)
+    def save_metadata(self, data_dict):
+        for symbol, info in data_dict.items():
+            self.col_metadata.update_one(
+                {"_id": symbol},
+                {"$set": info},
+                upsert=True
+            )
 
-# Instanciamos el gestor globalmente
-db_handler = JsonBinHandler()
+# Instanciamos el gestor
+db_handler = MongoHandler()
 
 class AssetData(BaseModel):
     name: str
