@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import yfinance as yf
 import pandas as pd
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 import json
 import os
 import time
@@ -24,7 +24,9 @@ load_dotenv()
 app = FastAPI()
 
 MARKET_DATA_CACHE = {"data": {}, "timestamp": 0} 
+MARKET_CAP_CACHE = {"data": {}, "timestamp": 0}  # Cache separado para market cap
 CACHE_DURATION_SECONDS = 10
+MARKET_CAP_CACHE_DURATION = 3600  # Market cap se actualiza cada hora
 
 SYMBOL_EXCEPTIONS = {
     "BTC": "BTC-USD",
@@ -39,49 +41,33 @@ class MongoHandler:
         if not self.MONGO_URI:
             raise RuntimeError("❌ ERROR: Falta MONGO_URI en .env")
 
-        # Conexión al Cluster
-        # tlsCAFile=certifi.where() es vital para evitar errores SSL en Windows/Mac
         self.client = pymongo.MongoClient(self.MONGO_URI, tlsCAFile=certifi.where())
-        
-        # Base de Datos (se creará sola si no existe)
         self.db = self.client["finlab_db"]
-        
-        # Colecciones (Equivalente a las tablas o archivos JSON)
         self.col_students = self.db["students"]
         self.col_config = self.db["config"]
         self.col_metadata = self.db["metadata"]
 
         print("✅ Conectado exitosamente a MongoDB Atlas")
 
-    # --- ESTUDIANTES ---
     def get_students(self):
-        # Descarga todos los estudiantes y los convierte al formato Dict {usuario: data}
-        # para que tu código actual siga funcionando igual.
         students = {}
         cursor = self.col_students.find({})
         for doc in cursor:
-            uid = doc["_id"] # En Mongo usamos el _id como el nombre de usuario
+            uid = doc["_id"]
             data = doc.copy()
-            del data["_id"] # Lo quitamos para no ensuciar tu lógica
+            del data["_id"]
             students[uid] = data
         return students
 
     def save_students(self, data_dict):
-        # Esta función recibe TOOOODO el diccionario de estudiantes.
-        # En una app real, guardaríamos solo el usuario modificado, 
-        # pero para mantener tu código simple, actualizamos uno por uno (Upsert).
-        
         for uid, user_data in data_dict.items():
-            # update_one con upsert=True: Si existe lo actualiza, si no, lo crea.
             self.col_students.update_one(
                 {"_id": uid}, 
                 {"$set": user_data}, 
                 upsert=True
             )
 
-    # --- CONFIGURACIÓN (Lista de activos visibles) ---
     def get_config(self):
-        # Guardamos la config en un documento con _id="market_config"
         doc = self.col_config.find_one({"_id": "market_config"})
         return doc["symbols"] if doc else ["GGAL", "YPF", "MELI", "BTC", "AAPL"]
 
@@ -92,7 +78,6 @@ class MongoHandler:
             upsert=True
         )
 
-    # --- METADATA (Sectores, volatilidad) ---
     def get_metadata(self):
         meta = {}
         cursor = self.col_metadata.find({})
@@ -111,7 +96,6 @@ class MongoHandler:
                 upsert=True
             )
 
-# Instanciamos el gestor
 db_handler = MongoHandler()
 
 class AssetData(BaseModel):
@@ -120,6 +104,21 @@ class AssetData(BaseModel):
     change_percent: float
     volatility: float
     sector: str
+    market_cap: Optional[float] = None
+    previous_close: Optional[float] = None
+    open_price: Optional[float] = None
+    day_low: Optional[float] = None
+    day_high: Optional[float] = None
+    fifty_two_week_low: Optional[float] = None
+    fifty_two_week_high: Optional[float] = None
+    volume: Optional[int] = None
+    avg_volume: Optional[int] = None
+    pe_ratio: Optional[float] = None
+    eps: Optional[float] = None
+    earnings_date: Optional[str] = None
+    dividend_yield: Optional[str] = None
+    ex_dividend_date: Optional[str] = None
+    target_est: Optional[float] = None
 
 class UserPortfolio(BaseModel):
     balance: float
@@ -140,19 +139,14 @@ class StudentRanking(BaseModel):
 class AddAssetRequest(BaseModel):
     symbol: str
 
-# --- FUNCIONES DE PERSISTENCIA REESCRITAS ---
-
 def load_db():
     return db_handler.get_students()
 
 def save_db(db_data):
-    # Guardamos en la nube
     db_handler.save_students(db_data)
 
 def load_market_config() -> List[str]:
-    # Obtiene de cache o de la nube
     config = db_handler.get_config()
-    # Fallback por si la nube está vacía
     if not config:
         return ["GGAL", "YPF", "MELI", "BTC", "AAPL"] 
     return config
@@ -168,6 +162,73 @@ def save_metadata(data: Dict):
 
 def get_yahoo_ticker(symbol: str) -> str:
     return SYMBOL_EXCEPTIONS.get(symbol, symbol)
+
+def format_timestamp_to_date(ts):
+    if not ts: return None
+    try:
+        from datetime import datetime
+        return datetime.fromtimestamp(ts).strftime('%b %d, %Y')
+    except:
+        return None
+
+def fetch_fundamental_data(symbols: List[str], force_update: bool = False) -> Dict[str, Dict]:
+    """Obtiene datos fundamentales (más lento pero preciso)"""
+    global MARKET_CAP_CACHE
+    
+    if not force_update and (time.time() - MARKET_CAP_CACHE["timestamp"] < MARKET_CAP_CACHE_DURATION):
+        return MARKET_CAP_CACHE["data"]
+    
+    fundamental_data = {}
+    
+    for symbol in symbols:
+        try:
+            yf_ticker = get_yahoo_ticker(symbol)
+            ticker = yf.Ticker(yf_ticker)
+            info = ticker.info
+            
+            # Intentar obtener market cap
+            market_cap = info.get("marketCap", 0)
+            if not market_cap:
+                market_cap = info.get("totalAssets", 0)  # Para ETFs
+            if not market_cap:
+                # Calcular aproximado: precio * shares outstanding
+                price = info.get("currentPrice", info.get("regularMarketPrice", 0))
+                shares = info.get("sharesOutstanding", 0)
+                market_cap = price * shares if price and shares else 1000000000
+            
+            # Formatear dividend yield
+            div_yield_val = info.get("dividendYield")
+            div_rate = info.get("dividendRate")
+            div_yield_str = None
+            if div_yield_val is not None and div_rate is not None:
+                div_yield_str = f"{div_rate:.2f} ({div_yield_val*100:.2f}%)"
+            
+            fundamental_data[symbol] = {
+                "market_cap": market_cap,
+                "previous_close": info.get("previousClose"),
+                "open_price": info.get("open"),
+                "day_low": info.get("dayLow"),
+                "day_high": info.get("dayHigh"),
+                "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+                "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+                "volume": info.get("volume"),
+                "avg_volume": info.get("averageVolume"),
+                "pe_ratio": info.get("trailingPE"),
+                "eps": info.get("trailingEps"),
+                "earnings_date": format_timestamp_to_date(info.get("earningsTimestamp")),
+                "dividend_yield": div_yield_str,
+                "ex_dividend_date": format_timestamp_to_date(info.get("exDividendDate")),
+                "target_est": info.get("targetMeanPrice")
+            }
+            
+        except Exception as e:
+            print(f"⚠️ Error obteniendo datos fundamentales de {symbol}: {e}")
+            fundamental_data[symbol] = {"market_cap": 1000000000}  # Default
+    
+    MARKET_CAP_CACHE["data"] = fundamental_data
+    MARKET_CAP_CACHE["timestamp"] = time.time()
+    
+    return fundamental_data
 
 def fetch_yfinance_data(force_update: bool = False):
     global MARKET_DATA_CACHE
@@ -188,6 +249,9 @@ def fetch_yfinance_data(force_update: bool = False):
         
     yf_tickers_map = {s: get_yahoo_ticker(s) for s in all_needed_symbols}
     tickers_to_download = list(yf_tickers_map.values())
+    
+    # Obtener datos fundamentales (usa cache de 1 hora)
+    fundamental_data = fetch_fundamental_data(list(all_needed_symbols))
     
     try:
         print(f"⬇ Descargando precios para: {tickers_to_download}")
@@ -226,17 +290,34 @@ def fetch_yfinance_data(force_update: bool = False):
 
                 meta_cache = load_metadata()
                 asset_meta = meta_cache.get(symbol, {})
+                f_data = fundamental_data.get(symbol, {})
 
                 results[symbol] = {
                     "name": asset_meta.get("name", symbol),
                     "price": round(current_price, 2),
                     "change_percent": round(change_percent, 2),
                     "volatility": asset_meta.get("volatility", 1.0),
-                    "sector": asset_meta.get("sector", "General")
+                    "sector": asset_meta.get("sector", "General"),
+                    "market_cap": f_data.get("market_cap", asset_meta.get("market_cap", 1000000000)),
+                    "previous_close": f_data.get("previous_close"),
+                    "open_price": f_data.get("open_price"),
+                    "day_low": f_data.get("day_low"),
+                    "day_high": f_data.get("day_high"),
+                    "fifty_two_week_low": f_data.get("fifty_two_week_low"),
+                    "fifty_two_week_high": f_data.get("fifty_two_week_high"),
+                    "volume": f_data.get("volume"),
+                    "avg_volume": f_data.get("avg_volume"),
+                    "pe_ratio": f_data.get("pe_ratio"),
+                    "eps": f_data.get("eps"),
+                    "earnings_date": f_data.get("earnings_date"),
+                    "dividend_yield": f_data.get("dividend_yield"),
+                    "ex_dividend_date": f_data.get("ex_dividend_date"),
+                    "target_est": f_data.get("target_est")
                 }
             except Exception as e:
                 results[symbol] = {
-                    "name": symbol, "price": 0.0, "change_percent": 0.0, "volatility": 0, "sector": "N/A"
+                    "name": symbol, "price": 0.0, "change_percent": 0.0, 
+                    "volatility": 0, "sector": "N/A", "market_cap": 1000000000
                 }
 
         MARKET_DATA_CACHE["data"] = results
@@ -247,9 +328,7 @@ def fetch_yfinance_data(force_update: bool = False):
         if MARKET_DATA_CACHE["data"]: return MARKET_DATA_CACHE["data"]
         return {}
 
-# Agregué esta nueva función.
 def send_verification_email(to_email: str, code: str):
-    # Clave de API desde Render
     api_key = os.getenv("BREVO_API_KEY")
     
     if not api_key:
@@ -258,11 +337,10 @@ def send_verification_email(to_email: str, code: str):
 
     url = "https://api.brevo.com/v3/smtp/email"
 
-    # Datos del correo
     payload = {
         "sender": {
             "name": "FIN LAB bot",
-            "email": "uadefinlab.bot@gmail.com" # Tiene que ser el mail que verificaste en Brevo
+            "email": "uadefinlab.bot@gmail.com"
         },
         "to": [
             {
@@ -291,7 +369,6 @@ def send_verification_email(to_email: str, code: str):
     try:
         response = requests.post(url, json=payload, headers=headers)
         
-        # Si responde 201 (Creado), salió bien.
         if response.status_code == 201:
             print(f"✅ Email enviado vía Brevo API a {to_email}")
             return True
@@ -309,6 +386,38 @@ def get_market_data():
     visible_symbols = load_market_config()
     filtered_data = {k: v for k, v in all_data.items() if k in visible_symbols}
     return filtered_data
+
+class ChatRequest(BaseModel):
+    message: str
+    asset: str
+    price: str
+    sector: str
+
+@app.post("/api/chat")
+def chat_with_ai(req: ChatRequest):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY no configurada.")
+
+    system_prompt = (
+        "Eres un analista financiero experto y conciso. "
+        "SOLO respondés preguntas estrictamente relacionadas con finanzas, mercados, acciones, economía o el activo en contexto. "
+        "Si la pregunta no es financiera, respondé únicamente: 'Solo respondo consultas financieras.' "
+        "Siempre respondé en UN solo párrafo, sin listas ni bullets. Sé breve y directo."
+    )
+    prompt = f"{system_prompt}\n\nContexto del activo: {req.asset} cotiza a {req.price} USD en el sector {req.sector}.\n\nPregunta del usuario: {req.message}"
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key={api_key}"
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+
+    try:
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+        data = response.json()
+        ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return {"reply": ai_text}
+    except Exception as e:
+        print(f"❌ Error Gemini API: {e}")
+        raise HTTPException(status_code=500, detail="Error al conectar con la IA.")
 
 @app.get("/api/leaderboard", response_model=List[StudentRanking])
 def get_leaderboard_data():
@@ -363,19 +472,14 @@ def execute_trade(req: TradeRequest):
     elif req.type == 'sell':
         current_qty = user_data['portfolio'].get(req.asset, 0)
         
-        # Validación estricta
         if req.quantity > current_qty:
             raise HTTPException(status_code=400, detail=f"Operación rechazada: Solo tienes {current_qty} acciones de {req.asset}.")
             
-        # --- LÓGICA DE VENTA (Solo una vez) ---
         user_data['balance'] += total_cost
         user_data['portfolio'][req.asset] -= req.quantity
         
-        # Limpieza de residuos
         if user_data['portfolio'][req.asset] < 0.001:
              user_data['portfolio'].pop(req.asset)
-             
-        # ¡AQUÍ TERMINA EL ELIF! (Borra todo lo que había duplicado abajo)
 
     db[req.usuario] = user_data
     save_db(db)
@@ -398,28 +502,31 @@ def add_market_asset(req: AddAssetRequest):
         print(f"🔍 Verificando {symbol} ({yf_ticker}) en Yahoo...")
         ticker_obj = yf.Ticker(yf_ticker)
 
-        # 1. VALIDACIÓN Y PRECIO (Usando history directo, no el motor global)
-        # Pedimos 5 días para ser consistentes con la lógica del sistema
         history = ticker_obj.history(period="5d")
         
         if history.empty:
             raise Exception("No data found")
             
-        # Obtenemos el último cierre válido
         last_close = history["Close"].iloc[-1]
         
-        # Si es NaN o 0, rechazamos
         if pd.isna(last_close) or float(last_close) == 0:
              raise HTTPException(status_code=404, detail=f"El activo {symbol} no tiene precio operable.")
 
-        # 2. VALIDAR TIPO DE ACTIVO (Tu restricción de Criptos)
         info = ticker_obj.info
         quote_type = info.get("quoteType", "").upper()
         
         if quote_type == "CRYPTOCURRENCY":
             raise HTTPException(status_code=400, detail="⚠️ Las Criptomonedas están deshabilitadas temporalmente. Solo Acciones.")
 
-        # 3. GUARDAR METADATA
+        # Obtener market cap
+        market_cap = info.get("marketCap", 0)
+        if not market_cap:
+            market_cap = info.get("totalAssets", 0)
+        if not market_cap:
+            price = info.get("currentPrice", info.get("regularMarketPrice", 0))
+            shares = info.get("sharesOutstanding", 0)
+            market_cap = price * shares if price and shares else 1000000000
+
         asset_name = info.get("shortName", info.get("longName", symbol))
         asset_sector = info.get("sector", "General")
         asset_volatility = info.get("beta", 1.0)
@@ -428,16 +535,18 @@ def add_market_asset(req: AddAssetRequest):
         metadata[symbol] = {
             "name": asset_name,
             "sector": asset_sector,
-            "volatility": asset_volatility
+            "volatility": asset_volatility,
+            "market_cap": market_cap
         }
         save_metadata(metadata)
 
-        # 4. AGREGAR A LA LISTA
         config.insert(0, symbol)
         save_market_config(config)
 
-        # 5. AHORA SÍ: Forzar actualización del motor global
-        # Como ya lo guardamos en el paso 4, ahora el motor sí lo verá
+        # Actualizar cache de market cap
+        global MARKET_CAP_CACHE
+        MARKET_CAP_CACHE["data"][symbol] = market_cap
+
         fetch_yfinance_data(force_update=True)
 
         return {
@@ -475,6 +584,35 @@ def get_user_data(usuario: str):
         save_db(db)
     return data
 
+COPA_PASSWORD = "COPAFINLABS2026"
+
+class ResetCopaRequest(BaseModel):
+    password: str
+    end_date: str  # ISO format
+
+@app.get("/api/copa-config")
+def get_copa_config():
+    doc = db_handler.col_config.find_one({"_id": "copa_config"})
+    if doc and "end_date" in doc:
+        return {"end_date": doc["end_date"]}
+    return {"end_date": "2026-01-27T00:00:00"}
+
+@app.post("/api/reset-copa")
+def reset_copa(req: ResetCopaRequest):
+    if req.password != COPA_PASSWORD:
+        raise HTTPException(status_code=403, detail="Contraseña incorrecta.")
+
+    result = db_handler.col_students.delete_many({})
+    print(f"🗑️ Copa reiniciada: {result.deleted_count} alumnos eliminados.")
+
+    db_handler.col_config.update_one(
+        {"_id": "copa_config"},
+        {"$set": {"end_date": req.end_date}},
+        upsert=True
+    )
+
+    return {"status": "success", "end_date": req.end_date}
+
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "mensaje": "El servidor Python está vivo y funcionando"}
@@ -486,25 +624,17 @@ async def read_index():
     return FileResponse('static/index.html')
 
 class LoginRequest(BaseModel):
-    usuario: str # Ahora usamos usuario UADE (ej: juan.perez), no legajo numérico
+    usuario: str
 
 class CodeVerification(BaseModel):
     usuario: str
     code: str
 
-# Agregué estos dos nuevos endpoints.
 @app.post("/api/auth/request-code")
 def request_code(req: LoginRequest):
-    """Paso 1: Recibe usuario, genera código y manda mail."""
     usuario = req.usuario.strip().lower()
-    
-    # Construimos el mail institucional
     email_destino = f"{usuario}@uade.edu.ar"
-    
-    # Generar código de 6 dígitos
     code = ''.join(random.choices(string.digits, k=6))
-    
-    # Guardar en memoria (En un sistema real, esto iría a Redis con expiración)
     PENDING_CODES[usuario] = code
     
     print(f"📨 Enviando código {code} a {email_destino}...")
@@ -518,31 +648,22 @@ def request_code(req: LoginRequest):
 
 @app.post("/api/auth/verify-code")
 def verify_code(req: CodeVerification):
-    """Paso 2: Verifica el código y loguea al usuario."""
     usuario = req.usuario.strip().lower()
     
-    # Verificar si hay un código pendiente
     if usuario not in PENDING_CODES:
         raise HTTPException(status_code=400, detail="No hay solicitud de código para este usuario.")
     
-    # Verificar si el código coincide
     if PENDING_CODES[usuario] != req.code:
         raise HTTPException(status_code=400, detail="Código incorrecto.")
     
-    # ¡ÉXITO! Borramos el código usado
     del PENDING_CODES[usuario]
     
-    # Ahora hacemos lo que hacía antes el 'get_user_data': Cargar o Crear
     db = load_db()
-    
-    # Usamos el 'usuario' (juan.perez) como ID en la base de datos ahora
     user_data = db.get(usuario)
     
     if not user_data:
-        # Usuario nuevo: Regalo de bienvenida
         user_data = {'balance': 100000.0, 'portfolio': {}, 'initial': 100000.0}
         db[usuario] = user_data
         save_db(db)
         
-    # Devolvemos los datos del usuario para que el JS inicie la sesión
     return {"status": "success", "userData": user_data, "userId": usuario}
