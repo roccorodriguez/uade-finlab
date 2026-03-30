@@ -444,37 +444,20 @@ def add_market_asset(req: AddAssetRequest):
 
     try:
         print(f"🔍 Verificando {symbol} ({yf_ticker}) en Yahoo...")
-        ticker_obj = yf.Ticker(yf_ticker)
+        fast = yf.Ticker(yf_ticker).fast_info
 
-        history = ticker_obj.history(period="5d")
-        
-        if history.empty:
-            raise Exception("No data found")
-            
-        last_close = history["Close"].iloc[-1]
-        
-        if pd.isna(last_close) or float(last_close) == 0:
-             raise HTTPException(status_code=404, detail=f"El activo {symbol} no tiene precio operable.")
-
-        info = ticker_obj.info
-        quote_type = info.get("quoteType", "").upper()
-        
+        quote_type = getattr(fast, "quote_type", "").upper()
         if quote_type == "CRYPTOCURRENCY":
             raise HTTPException(status_code=400, detail="⚠️ Las Criptomonedas están deshabilitadas temporalmente. Solo Acciones.")
 
-        # Obtener market cap
-        market_cap = info.get("marketCap", 0)
-        if not market_cap:
-            market_cap = info.get("totalAssets", 0)
-        if not market_cap:
-            price = info.get("currentPrice", info.get("regularMarketPrice", 0))
-            shares = info.get("sharesOutstanding", 0)
-            market_cap = price * shares if price and shares else 1000000000
+        last_price = getattr(fast, "last_price", None)
+        if not last_price or float(last_price) == 0:
+            raise Exception("No data found")
 
-        asset_name = info.get("shortName", info.get("longName", symbol))
-        asset_sector = info.get("sector", "General")
-        asset_volatility = info.get("beta", 1.0)
-        if asset_volatility is None: asset_volatility = 1.0
+        market_cap = getattr(fast, "market_cap", None) or 1000000000
+        asset_name = symbol
+        asset_sector = "General"
+        asset_volatility = 1.0
 
         metadata[symbol] = {
             "name": asset_name,
