@@ -185,7 +185,11 @@ def fetch_fundamental_data(symbols: List[str], force_update: bool = False) -> Di
             yf_ticker = get_yahoo_ticker(symbol)
             ticker = yf.Ticker(yf_ticker)
             info = ticker.info
-            
+
+            if not info:
+                fundamental_data[symbol] = {"market_cap": 1000000000}
+                continue
+
             # Intentar obtener market cap
             market_cap = info.get("marketCap", 0)
             if not market_cap:
@@ -224,7 +228,9 @@ def fetch_fundamental_data(symbols: List[str], force_update: bool = False) -> Di
         except Exception as e:
             print(f"⚠️ Error obteniendo datos fundamentales de {symbol}: {e}")
             fundamental_data[symbol] = {"market_cap": 1000000000}  # Default
-    
+
+        time.sleep(0.5)
+
     MARKET_CAP_CACHE["data"] = fundamental_data
     MARKET_CAP_CACHE["timestamp"] = time.time()
     
@@ -251,7 +257,7 @@ def fetch_yfinance_data(force_update: bool = False):
     tickers_to_download = list(yf_tickers_map.values())
     
     # Obtener datos fundamentales (usa cache de 1 hora)
-    fundamental_data = fetch_fundamental_data(list(all_needed_symbols), force_update=force_update)
+    fundamental_data = fetch_fundamental_data(list(all_needed_symbols))
     
     try:
         print(f"⬇ Descargando precios para: {tickers_to_download}")
@@ -548,6 +554,30 @@ def add_market_asset(req: AddAssetRequest):
 
         config.insert(0, symbol)
         save_market_config(config)
+
+        # Cachear fundamentales del nuevo símbolo sin refrescar todos
+        div_yield_val = info.get("dividendYield")
+        div_rate = info.get("dividendRate")
+        div_yield_str = None
+        if div_yield_val is not None and div_rate is not None:
+            div_yield_str = f"{div_rate:.2f} ({div_yield_val*100:.2f}%)"
+        MARKET_CAP_CACHE["data"][symbol] = {
+            "market_cap": market_cap,
+            "previous_close": info.get("previousClose"),
+            "open_price": info.get("open"),
+            "day_low": info.get("dayLow"),
+            "day_high": info.get("dayHigh"),
+            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+            "volume": info.get("volume"),
+            "avg_volume": info.get("averageVolume"),
+            "pe_ratio": info.get("trailingPE"),
+            "eps": info.get("trailingEps"),
+            "earnings_date": format_timestamp_to_date(info.get("earningsTimestamp")),
+            "dividend_yield": div_yield_str,
+            "ex_dividend_date": format_timestamp_to_date(info.get("exDividendDate")),
+            "target_est": info.get("targetMeanPrice")
+        }
 
         fetch_yfinance_data(force_update=True)
 
