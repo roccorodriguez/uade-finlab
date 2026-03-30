@@ -251,7 +251,7 @@ def fetch_yfinance_data(force_update: bool = False):
     tickers_to_download = list(yf_tickers_map.values())
     
     # Obtener datos fundamentales (usa cache de 1 hora)
-    fundamental_data = fetch_fundamental_data(list(all_needed_symbols))
+    fundamental_data = fetch_fundamental_data(list(all_needed_symbols), force_update=force_update)
     
     try:
         print(f"⬇ Descargando precios para: {tickers_to_download}")
@@ -291,6 +291,12 @@ def fetch_yfinance_data(force_update: bool = False):
                 meta_cache = load_metadata()
                 asset_meta = meta_cache.get(symbol, {})
                 f_data = fundamental_data.get(symbol, {})
+
+                prev_close = f_data.get("previous_close")
+                if prev_close and prev_close > 0 and current_price > 0:
+                    change_percent = (current_price - prev_close) / prev_close * 100
+                    if math.isnan(change_percent) or math.isinf(change_percent):
+                        change_percent = 0.0
 
                 results[symbol] = {
                     "name": asset_meta.get("name", symbol),
@@ -384,7 +390,7 @@ def send_verification_email(to_email: str, code: str):
 def get_market_data():
     all_data = fetch_yfinance_data()
     visible_symbols = load_market_config()
-    filtered_data = {k: v for k, v in all_data.items() if k in visible_symbols}
+    filtered_data = {k: all_data[k] for k in visible_symbols if k in all_data}
     return filtered_data
 
 class ChatRequest(BaseModel):
@@ -407,7 +413,7 @@ def chat_with_ai(req: ChatRequest):
     )
     prompt = f"{system_prompt}\n\nContexto del activo: {req.asset} cotiza a {req.price} USD en el sector {req.sector}.\n\nPregunta del usuario: {req.message}"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-3-12b-it:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key={api_key}"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
     try:
@@ -542,10 +548,6 @@ def add_market_asset(req: AddAssetRequest):
 
         config.insert(0, symbol)
         save_market_config(config)
-
-        # Actualizar cache de market cap
-        global MARKET_CAP_CACHE
-        MARKET_CAP_CACHE["data"][symbol] = market_cap
 
         fetch_yfinance_data(force_update=True)
 

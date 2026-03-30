@@ -688,7 +688,7 @@ function resetLogin() {
 
     const input = document.getElementById('loginInput');
     input.value = "";
-    input.placeholder = "Ej: juan.perez";
+    input.placeholder = "Ej: warrenbuffett";
     input.type = "text";
     input.disabled = false;
 
