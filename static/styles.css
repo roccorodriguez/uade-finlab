@@ -1327,9 +1327,10 @@ header {
     padding: 16px;
     position: fixed;
     z-index: 2000;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 80px;
+    right: 30px;
+    left: auto;
+    transform: none;
     font-size: 14px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     font-weight: bold;

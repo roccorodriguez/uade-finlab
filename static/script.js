@@ -514,7 +514,7 @@ function initHeatmapTooltip() {
 }
 
 function loadAssetFromHeatmap(symbol) {
-    switchTab('explorer', document.querySelectorAll('.nav-tab')[1]);
+    switchTab('analysis', document.querySelectorAll('.nav-tab')[2]);
     loadAsset(symbol);
 }
 
@@ -1135,6 +1135,7 @@ const handleChat = () => {
     }, 600);
 }
 sendChatBtn.addEventListener("click", handleChat);
+chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChat(); } });
 
 function handleEnter(e) {
     if (e.key === 'Enter') addNewAsset();
