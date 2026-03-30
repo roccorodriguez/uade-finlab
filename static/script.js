@@ -47,7 +47,6 @@ async function initializeApp() {
         renderTreemap();
         loadAsset('NVDA');
 
-        // Ocultar loader inicial
         const loader = document.getElementById('initialLoader');
         if (loader) {
             loader.style.opacity = '0';
@@ -972,53 +971,11 @@ function loadAsset(symbol) {
     const data = realTimePrices[symbol] || { name: symbol, sector: 'General', volatility: 0 };
 
     if (document.getElementById('metaName')) document.getElementById('metaName').innerText = data.name;
-
-    // Formatting helpers
-    const fMoney = val => val ? `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
-    const fNum = val => val ? val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
-
-    function formatBigNumber(num) {
-        if (!num) return '-';
-        if (num >= 1e12) return (num / 1e12).toFixed(3) + 'T';
-        if (num >= 1e9) return (num / 1e9).toFixed(3) + 'B';
-        if (num >= 1e6) return (num / 1e6).toFixed(3) + 'M';
-        return num.toLocaleString();
-    }
-
-    // Populate the new Financial Grid
-    if (document.getElementById('finPrevClose')) document.getElementById('finPrevClose').innerText = fMoney(data.previous_close);
-    if (document.getElementById('finOpen')) document.getElementById('finOpen').innerText = fMoney(data.open_price);
-
-    const dayRange = data.day_low && data.day_high ? `${fNum(data.day_low)} - ${fNum(data.day_high)}` : '-';
-    if (document.getElementById('finDayRange')) document.getElementById('finDayRange').innerText = dayRange;
-
-    const week52Range = data.fifty_two_week_low && data.fifty_two_week_high ? `${fNum(data.fifty_two_week_low)} - ${fNum(data.fifty_two_week_high)}` : '-';
-    if (document.getElementById('fin52Week')) document.getElementById('fin52Week').innerText = week52Range;
-
-    if (document.getElementById('finVolume')) document.getElementById('finVolume').innerText = data.volume ? data.volume.toLocaleString() : '-';
-    if (document.getElementById('finAvgVol')) document.getElementById('finAvgVol').innerText = data.avg_volume ? data.avg_volume.toLocaleString() : '-';
-
-    if (document.getElementById('finMarketCap')) document.getElementById('finMarketCap').innerText = formatBigNumber(data.market_cap);
-    if (document.getElementById('finBeta')) document.getElementById('finBeta').innerText = fNum(data.pe_ratio); // Note: We don't have beta from fundamental_data directly except volatility
-    if (document.getElementById('finPE')) document.getElementById('finPE').innerText = fNum(data.pe_ratio);
-    if (document.getElementById('finEPS')) document.getElementById('finEPS').innerText = fNum(data.eps);
-    if (document.getElementById('finEarnings')) document.getElementById('finEarnings').innerText = data.earnings_date || '-';
-    if (document.getElementById('finDiv')) document.getElementById('finDiv').innerText = data.dividend_yield || '-';
-
-    if (document.getElementById('finExDiv')) document.getElementById('finExDiv').innerText = data.ex_dividend_date || '-';
-    if (document.getElementById('finTargetEst')) document.getElementById('finTargetEst').innerText = fMoney(data.target_est);
-    if (document.getElementById('finSector')) document.getElementById('finSector').innerText = data.sector || '-';
-
-    // Volatilidad -> Beta fallback si quisieras 
-    if (document.getElementById('finBeta')) document.getElementById('finBeta').innerText = data.volatility ? data.volatility.toFixed(2) : '-';
-
     if (document.getElementById('chat-context-asset')) document.getElementById('chat-context-asset').innerText = symbol;
 
     const btnTv = document.getElementById('btnTradingView');
     if (btnTv) {
-        let searchSymbol = symbol;
-        if (symbol === 'BRK') searchSymbol = 'BRK.B';
-
+        const searchSymbol = symbol === 'BRK' ? 'BRK.B' : symbol;
         btnTv.href = `https://es.tradingview.com/symbols/${searchSymbol}/`;
     }
 

@@ -17,16 +17,15 @@ import random
 import string
 import pymongo
 import certifi
+import threading
 
 from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
 
-MARKET_DATA_CACHE = {"data": {}, "timestamp": 0} 
-MARKET_CAP_CACHE = {"data": {}, "timestamp": 0}  # Cache separado para market cap
+MARKET_DATA_CACHE = {"data": {}, "timestamp": 0}
 CACHE_DURATION_SECONDS = 10
-MARKET_CAP_CACHE_DURATION = 3600  # Market cap se actualiza cada hora
 
 SYMBOL_EXCEPTIONS = {
     "BTC": "BTC-USD",
@@ -105,20 +104,6 @@ class AssetData(BaseModel):
     volatility: float
     sector: str
     market_cap: Optional[float] = None
-    previous_close: Optional[float] = None
-    open_price: Optional[float] = None
-    day_low: Optional[float] = None
-    day_high: Optional[float] = None
-    fifty_two_week_low: Optional[float] = None
-    fifty_two_week_high: Optional[float] = None
-    volume: Optional[int] = None
-    avg_volume: Optional[int] = None
-    pe_ratio: Optional[float] = None
-    eps: Optional[float] = None
-    earnings_date: Optional[str] = None
-    dividend_yield: Optional[str] = None
-    ex_dividend_date: Optional[str] = None
-    target_est: Optional[float] = None
 
 class UserPortfolio(BaseModel):
     balance: float
@@ -163,78 +148,45 @@ def save_metadata(data: Dict):
 def get_yahoo_ticker(symbol: str) -> str:
     return SYMBOL_EXCEPTIONS.get(symbol, symbol)
 
-def format_timestamp_to_date(ts):
-    if not ts: return None
+_MC_UPDATE_RUNNING = False
+
+def _fill_missing_market_caps(symbols: List[str]):
+    """Corre una sola vez al arrancar para completar market_caps faltantes en metadata."""
+    global _MC_UPDATE_RUNNING
     try:
-        from datetime import datetime
-        return datetime.fromtimestamp(ts).strftime('%b %d, %Y')
-    except:
-        return None
-
-def fetch_fundamental_data(symbols: List[str], force_update: bool = False) -> Dict[str, Dict]:
-    """Obtiene datos fundamentales (más lento pero preciso)"""
-    global MARKET_CAP_CACHE
-    
-    if not force_update and (time.time() - MARKET_CAP_CACHE["timestamp"] < MARKET_CAP_CACHE_DURATION):
-        return MARKET_CAP_CACHE["data"]
-    
-    fundamental_data = {}
-    
-    for symbol in symbols:
-        try:
-            yf_ticker = get_yahoo_ticker(symbol)
-            ticker = yf.Ticker(yf_ticker)
-            info = ticker.info
-
-            if not info:
-                fundamental_data[symbol] = {"market_cap": 1000000000}
+        metadata = load_metadata()
+        updated = False
+        for symbol in symbols:
+            if metadata.get(symbol, {}).get("market_cap"):
                 continue
+            try:
+                mc = yf.Ticker(get_yahoo_ticker(symbol)).fast_info.market_cap
+                if mc:
+                    if symbol not in metadata:
+                        metadata[symbol] = {}
+                    metadata[symbol]["market_cap"] = mc
+                    updated = True
+                    print(f"✅ Market cap completado: {symbol} = {mc:,.0f}")
+            except Exception as e:
+                print(f"⚠️ No se pudo obtener market cap de {symbol}: {e}")
+            time.sleep(1)
+        if updated:
+            save_metadata(metadata)
+            print("✅ Market caps guardados en MongoDB")
+    finally:
+        _MC_UPDATE_RUNNING = False
 
-            # Intentar obtener market cap
-            market_cap = info.get("marketCap", 0)
-            if not market_cap:
-                market_cap = info.get("totalAssets", 0)  # Para ETFs
-            if not market_cap:
-                # Calcular aproximado: precio * shares outstanding
-                price = info.get("currentPrice", info.get("regularMarketPrice", 0))
-                shares = info.get("sharesOutstanding", 0)
-                market_cap = price * shares if price and shares else 1000000000
-            
-            # Formatear dividend yield
-            div_yield_val = info.get("dividendYield")
-            div_rate = info.get("dividendRate")
-            div_yield_str = None
-            if div_yield_val is not None and div_rate is not None:
-                div_yield_str = f"{div_rate:.2f} ({div_yield_val*100:.2f}%)"
-            
-            fundamental_data[symbol] = {
-                "market_cap": market_cap,
-                "previous_close": info.get("previousClose"),
-                "open_price": info.get("open"),
-                "day_low": info.get("dayLow"),
-                "day_high": info.get("dayHigh"),
-                "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
-                "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
-                "volume": info.get("volume"),
-                "avg_volume": info.get("averageVolume"),
-                "pe_ratio": info.get("trailingPE"),
-                "eps": info.get("trailingEps"),
-                "earnings_date": format_timestamp_to_date(info.get("earningsTimestamp")),
-                "dividend_yield": div_yield_str,
-                "ex_dividend_date": format_timestamp_to_date(info.get("exDividendDate")),
-                "target_est": info.get("targetMeanPrice")
-            }
-            
-        except Exception as e:
-            print(f"⚠️ Error obteniendo datos fundamentales de {symbol}: {e}")
-            fundamental_data[symbol] = {"market_cap": 1000000000}  # Default
-
-        time.sleep(0.5)
-
-    MARKET_CAP_CACHE["data"] = fundamental_data
-    MARKET_CAP_CACHE["timestamp"] = time.time()
-    
-    return fundamental_data
+def trigger_market_cap_fill(symbols: List[str]):
+    global _MC_UPDATE_RUNNING
+    if _MC_UPDATE_RUNNING:
+        return
+    metadata = load_metadata()
+    missing = [s for s in symbols if not metadata.get(s, {}).get("market_cap")]
+    if not missing:
+        return
+    print(f"⚙️ Completando market cap de {len(missing)} símbolos: {missing}")
+    _MC_UPDATE_RUNNING = True
+    threading.Thread(target=_fill_missing_market_caps, args=(missing,), daemon=True).start()
 
 def fetch_yfinance_data(force_update: bool = False):
     global MARKET_DATA_CACHE
@@ -243,11 +195,13 @@ def fetch_yfinance_data(force_update: bool = False):
         return MARKET_DATA_CACHE["data"]
 
     visible_symbols = load_market_config()
+    trigger_market_cap_fill(visible_symbols)
+
     student_db = load_db()
     portfolio_symbols = builtins.set()
     for record in student_db.values():
         portfolio_symbols.update(record['portfolio'].keys())
-    
+
     all_needed_symbols = builtins.set(visible_symbols).union(portfolio_symbols)
 
     if not all_needed_symbols:
@@ -255,17 +209,15 @@ def fetch_yfinance_data(force_update: bool = False):
         
     yf_tickers_map = {s: get_yahoo_ticker(s) for s in all_needed_symbols}
     tickers_to_download = list(yf_tickers_map.values())
-    
-    # Obtener datos fundamentales (usa cache de 1 hora)
-    fundamental_data = fetch_fundamental_data(list(all_needed_symbols))
-    
+
     try:
         print(f"⬇ Descargando precios para: {tickers_to_download}")
 
         data = yf.download(tickers_to_download, period="5d", group_by="ticker", progress=False)
-        
+
+        meta_cache = load_metadata()
         results = {}
-        
+
         for symbol in all_needed_symbols:
             yf_ticker = yf_tickers_map[symbol]
 
@@ -282,27 +234,20 @@ def fetch_yfinance_data(force_update: bool = False):
                 if history.empty:
                     current_price = 0.0
                     change_percent = 0.0
+                    previous_close = None
                 else:
                     current_price = float(history.iloc[-1])
+                    previous_close = float(history.iloc[-2]) if len(history) >= 2 else None
 
-                    if len(history) >= 2:
-                        pct_series = history.pct_change() * 100
-                        change_percent = float(pct_series.iloc[-1])
+                    if previous_close and previous_close > 0:
+                        change_percent = (current_price - previous_close) / previous_close * 100
                     else:
                         change_percent = 0.0
 
                     if math.isnan(current_price) or math.isinf(current_price): current_price = 0.0
                     if math.isnan(change_percent) or math.isinf(change_percent): change_percent = 0.0
 
-                meta_cache = load_metadata()
                 asset_meta = meta_cache.get(symbol, {})
-                f_data = fundamental_data.get(symbol, {})
-
-                prev_close = f_data.get("previous_close")
-                if prev_close and prev_close > 0 and current_price > 0:
-                    change_percent = (current_price - prev_close) / prev_close * 100
-                    if math.isnan(change_percent) or math.isinf(change_percent):
-                        change_percent = 0.0
 
                 results[symbol] = {
                     "name": asset_meta.get("name", symbol),
@@ -310,26 +255,12 @@ def fetch_yfinance_data(force_update: bool = False):
                     "change_percent": round(change_percent, 2),
                     "volatility": asset_meta.get("volatility", 1.0),
                     "sector": asset_meta.get("sector", "General"),
-                    "market_cap": f_data.get("market_cap", asset_meta.get("market_cap", 1000000000)),
-                    "previous_close": f_data.get("previous_close"),
-                    "open_price": f_data.get("open_price"),
-                    "day_low": f_data.get("day_low"),
-                    "day_high": f_data.get("day_high"),
-                    "fifty_two_week_low": f_data.get("fifty_two_week_low"),
-                    "fifty_two_week_high": f_data.get("fifty_two_week_high"),
-                    "volume": f_data.get("volume"),
-                    "avg_volume": f_data.get("avg_volume"),
-                    "pe_ratio": f_data.get("pe_ratio"),
-                    "eps": f_data.get("eps"),
-                    "earnings_date": f_data.get("earnings_date"),
-                    "dividend_yield": f_data.get("dividend_yield"),
-                    "ex_dividend_date": f_data.get("ex_dividend_date"),
-                    "target_est": f_data.get("target_est")
+                    "market_cap": asset_meta.get("market_cap"),
                 }
             except Exception as e:
                 results[symbol] = {
-                    "name": symbol, "price": 0.0, "change_percent": 0.0, 
-                    "volatility": 0, "sector": "N/A", "market_cap": 1000000000
+                    "name": symbol, "price": 0.0, "change_percent": 0.0,
+                    "volatility": 0, "sector": "N/A"
                 }
 
         MARKET_DATA_CACHE["data"] = results
@@ -398,6 +329,7 @@ def get_market_data():
     visible_symbols = load_market_config()
     filtered_data = {k: all_data[k] for k in visible_symbols if k in all_data}
     return filtered_data
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -554,30 +486,6 @@ def add_market_asset(req: AddAssetRequest):
 
         config.insert(0, symbol)
         save_market_config(config)
-
-        # Cachear fundamentales del nuevo símbolo sin refrescar todos
-        div_yield_val = info.get("dividendYield")
-        div_rate = info.get("dividendRate")
-        div_yield_str = None
-        if div_yield_val is not None and div_rate is not None:
-            div_yield_str = f"{div_rate:.2f} ({div_yield_val*100:.2f}%)"
-        MARKET_CAP_CACHE["data"][symbol] = {
-            "market_cap": market_cap,
-            "previous_close": info.get("previousClose"),
-            "open_price": info.get("open"),
-            "day_low": info.get("dayLow"),
-            "day_high": info.get("dayHigh"),
-            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
-            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
-            "volume": info.get("volume"),
-            "avg_volume": info.get("averageVolume"),
-            "pe_ratio": info.get("trailingPE"),
-            "eps": info.get("trailingEps"),
-            "earnings_date": format_timestamp_to_date(info.get("earningsTimestamp")),
-            "dividend_yield": div_yield_str,
-            "ex_dividend_date": format_timestamp_to_date(info.get("exDividendDate")),
-            "target_est": info.get("targetMeanPrice")
-        }
 
         fetch_yfinance_data(force_update=True)
 
