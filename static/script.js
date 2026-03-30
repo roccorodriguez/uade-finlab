@@ -846,7 +846,11 @@ function addToFeed(legajo, symbol, type, qty) {
     `;
 
     feed.insertBefore(item, feed.firstChild);
-    if (feed.children.length > 8) feed.lastChild.remove();
+    if (feed.children.length > 8) {
+        const last = feed.lastChild;
+        last.classList.add('removing');
+        setTimeout(() => last.remove(), 200);
+    }
 }
 
 function renderLeaderboard(students) {
@@ -876,8 +880,6 @@ function renderLeaderboard(students) {
 
 function renderAssetList() {
     const container = document.getElementById('assetList');
-    container.innerHTML = '';
-
     const symbols = Object.keys(realTimePrices);
 
     if (symbols.length === 0) {
@@ -885,45 +887,73 @@ function renderAssetList() {
         return;
     }
 
+    // Build map of existing items (items without data-symbol are legacy/empty-state nodes)
+    const existingItems = {};
+    container.querySelectorAll('.asset-item[data-symbol]').forEach(el => {
+        existingItems[el.dataset.symbol] = el;
+    });
+
+    // Clear non-diffable content (empty state message or legacy nodes)
+    if (Object.keys(existingItems).length === 0) container.innerHTML = '';
+
+    // Remove stale items no longer in realTimePrices
+    const currentSet = new Set(symbols);
+    Object.keys(existingItems).forEach(sym => {
+        if (!currentSet.has(sym)) existingItems[sym].remove();
+    });
+
+    // Update or create items, re-appending to preserve order
     symbols.forEach(symbol => {
         const p = realTimePrices[symbol];
-
         if (!p) return;
 
-        const activeClass = symbol === currentAsset ? 'active' : '';
+        const isActive = symbol === currentAsset;
         const priceClass = p.change_percent >= 0 ? 'positive' : 'negative';
         const sign = p.change_percent > 0 ? '+' : '';
+        const priceStr = `$${p.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const changeStr = `${sign}${p.change_percent.toFixed(2)}%`;
 
-        const trashIcon = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-        `;
-
-        container.innerHTML += `
-            <div class="asset-item ${activeClass}" onclick="loadAsset('${symbol}')">
-                
-                <div style="overflow: hidden;">
-                    <div class="asset-symbol">${symbol}</div>
-                    <div class="asset-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || symbol}</div>
-                </div>
-
-                <button class="btn-remove" onclick="event.stopPropagation(); removeAsset('${symbol}')" title="Eliminar">
-                    ${trashIcon}
-                </button>
-
-                <div class="asset-price-mini">
-                    $${p.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-
-                <div class="asset-change-mini ${priceClass}">
-                    ${sign}${p.change_percent.toFixed(2)}%
-                </div>
-
-            </div>
-        `;
+        if (existingItems[symbol]) {
+            const item = existingItems[symbol];
+            item.className = `asset-item${isActive ? ' active' : ''}`;
+            const priceEl = item.querySelector('.asset-price-mini');
+            const changeEl = item.querySelector('.asset-change-mini');
+            if (priceEl) priceEl.textContent = priceStr;
+            if (changeEl) { changeEl.className = `asset-change-mini ${priceClass}`; changeEl.textContent = changeStr; }
+        } else {
+            const item = createAssetItemEl(symbol, p, isActive);
+            container.appendChild(item);
+            item.animate(
+                [{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'translateX(0)' }],
+                { duration: 220, easing: 'ease' }
+            );
+        }
     });
+}
+
+function createAssetItemEl(symbol, p, isActive) {
+    const div = document.createElement('div');
+    div.className = `asset-item${isActive ? ' active' : ''}`;
+    div.dataset.symbol = symbol;
+
+    const priceClass = p.change_percent >= 0 ? 'positive' : 'negative';
+    const sign = p.change_percent > 0 ? '+' : '';
+    const trashIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+
+    div.innerHTML = `
+        <div style="overflow: hidden;">
+            <div class="asset-symbol">${symbol}</div>
+            <div class="asset-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || symbol}</div>
+        </div>
+        <button class="btn-remove" title="Eliminar">${trashIcon}</button>
+        <div class="asset-price-mini">$${p.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="asset-change-mini ${priceClass}">${sign}${p.change_percent.toFixed(2)}%</div>
+    `;
+
+    div.addEventListener('click', () => loadAsset(symbol));
+    div.querySelector('.btn-remove').addEventListener('click', e => { e.stopPropagation(); removeAsset(symbol); });
+
+    return div;
 }
 
 function loadTradingViewChart(symbol) {
@@ -1025,29 +1055,37 @@ async function addNewAsset() {
 }
 
 async function removeAsset(symbol) {
-    if (confirm(`¿Seguro que quieres eliminar ${symbol} de la pizarra?`)) {
-        try {
-            const response = await fetch(`/api/market/${symbol}`, {
-                method: 'DELETE'
-            });
+    if (!confirm(`¿Seguro que quieres eliminar ${symbol} de la pizarra?`)) return;
 
-            if (response.ok) {
-                showToast(`🗑️ ${symbol} eliminado.`, 'success');
+    const item = document.querySelector(`.asset-item[data-symbol="${symbol}"]`);
+    if (item) {
+        await item.animate(
+            [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: 'translateX(-10px)' }],
+            { duration: 180, easing: 'ease', fill: 'forwards' }
+        ).finished;
+    }
 
-                if (symbol === currentAsset) {
-                    const remaining = Object.keys(realTimePrices).filter(k => k !== symbol);
-                    if (remaining.length > 0) loadAsset(remaining[0]);
-                }
+    try {
+        const response = await fetch(`/api/market/${symbol}`, { method: 'DELETE' });
 
-                previousPrices = {};
-                await fetchMarketDataAndLeaderboard();
-                renderTreemap();
-            } else {
-                showToast('❌ Error al eliminar activo.', 'error');
+        if (response.ok) {
+            showToast(`🗑️ ${symbol} eliminado.`, 'success');
+
+            if (symbol === currentAsset) {
+                const remaining = Object.keys(realTimePrices).filter(k => k !== symbol);
+                if (remaining.length > 0) loadAsset(remaining[0]);
             }
-        } catch (e) {
-            showToast('❌ Error de conexión.', 'error');
+
+            previousPrices = {};
+            await fetchMarketDataAndLeaderboard();
+            renderTreemap();
+        } else {
+            showToast('❌ Error al eliminar activo.', 'error');
+            if (item) item.getAnimations().forEach(a => a.cancel());
         }
+    } catch (e) {
+        showToast('❌ Error de conexión.', 'error');
+        if (item) item.getAnimations().forEach(a => a.cancel());
     }
 }
 

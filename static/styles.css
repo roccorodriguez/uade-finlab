@@ -566,7 +566,7 @@ header {
     padding: 12px 12px;
     border-bottom: 1px solid var(--border);
     border-left: 3px solid transparent;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     background: transparent;
     cursor: pointer;
 }
@@ -644,6 +644,7 @@ header {
     color: var(--danger);
 }
 
+
 /* ================= FEED Y RANKING ================= */
 .col-center {
     display: flex;
@@ -670,30 +671,40 @@ header {
 .feed-list {
     flex-grow: 1;
     overflow-y: hidden;
-    position: relative;
 }
 
 .feed-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
     padding: 10px;
 }
 
 .feed-item {
     font-size: 12px;
     padding: 8px 12px;
+    margin-bottom: 4px;
     border-radius: 4px;
     background: #f8fafc;
     display: flex;
     justify-content: space-between;
     border-left: 3px solid #555;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    animation: slideIn 0.3s ease-out;
+    overflow: hidden;
+    animation: feedIn 0.25s ease-out forwards;
+}
+
+.feed-item.removing {
+    animation: feedOut 0.2s ease-out forwards;
+}
+
+@keyframes feedIn {
+    from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
+    to   { opacity: 1; max-height: 60px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 4px; }
+}
+
+@keyframes feedOut {
+    from { opacity: 1; max-height: 60px; padding-top: 8px; padding-bottom: 8px; margin-bottom: 4px; }
+    to   { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; }
 }
 
 .feed-buy {
@@ -1338,29 +1349,29 @@ header {
 
 #toast.show {
     visibility: visible;
-    animation: fadein 0.5s, fadeout 0.5s 2.5s forwards;
+    animation: fadein 0.5s forwards, fadeout 0.5s 2.5s forwards;
 }
 
 @keyframes fadein {
     from {
-        bottom: 0;
+        bottom: 30px;
         opacity: 0;
     }
 
     to {
-        bottom: 30px;
+        bottom: 80px;
         opacity: 1;
     }
 }
 
 @keyframes fadeout {
     from {
-        bottom: 30px;
+        bottom: 80px;
         opacity: 1;
     }
 
     to {
-        bottom: 0;
+        bottom: 30px;
         opacity: 0;
     }
 }
