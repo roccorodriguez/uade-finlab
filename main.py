@@ -351,7 +351,7 @@ def chat_with_ai(req: ChatRequest):
     )
     prompt = f"{system_prompt}\n\nContexto del activo: {req.asset} cotiza a {req.price} USD en el sector {req.sector}.\n\nPregunta del usuario: {req.message}"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
     try:
