@@ -920,6 +920,7 @@ function renderAssetList() {
             const changeEl = item.querySelector('.asset-change-mini');
             if (priceEl) priceEl.textContent = priceStr;
             if (changeEl) { changeEl.className = `asset-change-mini ${priceClass}`; changeEl.textContent = changeStr; }
+            container.appendChild(item);
         } else {
             const item = createAssetItemEl(symbol, p, isActive);
             container.appendChild(item);
